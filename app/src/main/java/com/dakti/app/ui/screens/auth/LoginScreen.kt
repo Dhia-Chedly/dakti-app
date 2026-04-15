@@ -2,48 +2,136 @@
 
 package com.dakti.app.ui.screens.auth
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.dakti.app.ui.components.DaktiPlaceholderContent
+import com.dakti.app.presentation.auth.LoginFormState
 
 @Composable
 fun LoginScreen(
-    message: String,
+    formState: LoginFormState,
+    isLoading: Boolean,
+    feedbackMessage: String?,
+    onEmailChanged: (String) -> Unit,
+    onPasswordChanged: (String) -> Unit,
     onLoginClick: () -> Unit,
     onGoToRegister: () -> Unit,
     onBack: () -> Unit
 ) {
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(title = { Text(text = "Login") })
+            CenterAlignedTopAppBar(
+                title = { Text(text = "Login") },
+                navigationIcon = {
+                    TextButton(onClick = onBack) {
+                        Text(text = "Back")
+                    }
+                }
+            )
         }
     ) { innerPadding ->
-        DaktiPlaceholderContent(
-            title = "Sign in",
-            description = message,
-            modifier = Modifier.padding(innerPadding)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Button(onClick = onLoginClick) {
-                Text(text = "Demo Login")
+            Text(
+                text = "Welcome back",
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Text(
+                text = "Sign in to continue organizing reservations and matches.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            OutlinedTextField(
+                value = formState.email,
+                onValueChange = onEmailChanged,
+                label = { Text("Email") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                singleLine = true,
+                isError = formState.emailError != null,
+                supportingText = {
+                    formState.emailError?.let { Text(text = it) }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = formState.password,
+                onValueChange = onPasswordChanged,
+                label = { Text("Password") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true,
+                isError = formState.passwordError != null,
+                supportingText = {
+                    formState.passwordError?.let { Text(text = it) }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            feedbackMessage?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(onClick = onGoToRegister) {
-                Text(text = "Need an account?")
+
+            Button(
+                onClick = onLoginClick,
+                enabled = !isLoading && formState.canSubmit,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(vertical = 2.dp)
+                            .height(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(text = "Login")
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            TextButton(onClick = onBack) {
-                Text(text = "Back")
+
+            TextButton(
+                onClick = onGoToRegister,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Don't have an account? Register")
             }
+
+            Text(
+                text = "Demo account: demo@dakti.app / demo123",
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }

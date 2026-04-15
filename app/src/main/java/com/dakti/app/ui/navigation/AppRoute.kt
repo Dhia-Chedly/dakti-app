@@ -1,10 +1,14 @@
 package com.dakti.app.ui.navigation
 
 sealed class AppRoute(val route: String) {
+    data object Splash : AppRoute("splash")
+
+    data object AuthGraph : AppRoute("auth_graph")
     data object Welcome : AppRoute("welcome")
     data object Login : AppRoute("login")
     data object Register : AppRoute("register")
 
+    data object MainGraph : AppRoute("main_graph")
     data object Home : AppRoute("home")
     data object Venues : AppRoute("venues")
     data object VenueDetails : AppRoute("venue_details/{venueId}") {

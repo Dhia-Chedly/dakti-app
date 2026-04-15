@@ -19,9 +19,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             DaktiTheme {
                 val startDestination = if (AppConstants.SKIP_AUTH_FOR_DEMO) {
-                    AppRoute.Home.route
+                    AppRoute.MainGraph.route
                 } else {
-                    AppRoute.Welcome.route
+                    AppRoute.Splash.route
                 }
 
                 DaktiNavGraph(startDestination = startDestination)

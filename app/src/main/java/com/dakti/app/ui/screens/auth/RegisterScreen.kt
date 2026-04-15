@@ -2,47 +2,172 @@
 
 package com.dakti.app.ui.screens.auth
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.dakti.app.ui.components.DaktiPlaceholderContent
+import com.dakti.app.presentation.auth.RegisterFormState
 
 @Composable
 fun RegisterScreen(
-    message: String,
+    formState: RegisterFormState,
+    isLoading: Boolean,
+    feedbackMessage: String?,
+    onNameChanged: (String) -> Unit,
+    onEmailChanged: (String) -> Unit,
+    onPhoneChanged: (String) -> Unit,
+    onPasswordChanged: (String) -> Unit,
+    onConfirmPasswordChanged: (String) -> Unit,
     onRegisterClick: () -> Unit,
     onGoToLogin: () -> Unit,
     onBack: () -> Unit
 ) {
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(title = { Text(text = "Register") })
+            CenterAlignedTopAppBar(
+                title = { Text(text = "Register") },
+                navigationIcon = {
+                    TextButton(onClick = onBack) {
+                        Text(text = "Back")
+                    }
+                }
+            )
         }
     ) { innerPadding ->
-        DaktiPlaceholderContent(
-            title = "Create account",
-            description = message,
-            modifier = Modifier.padding(innerPadding)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Button(onClick = onRegisterClick) {
-                Text(text = "Demo Register")
+            Text(
+                text = "Create your Dakti account",
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Text(
+                text = "Set up your profile to start organizing games.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            OutlinedTextField(
+                value = formState.fullName,
+                onValueChange = onNameChanged,
+                label = { Text("Full name") },
+                singleLine = true,
+                isError = formState.fullNameError != null,
+                supportingText = {
+                    formState.fullNameError?.let { Text(text = it) }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = formState.email,
+                onValueChange = onEmailChanged,
+                label = { Text("Email") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                singleLine = true,
+                isError = formState.emailError != null,
+                supportingText = {
+                    formState.emailError?.let { Text(text = it) }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = formState.phoneNumber,
+                onValueChange = onPhoneChanged,
+                label = { Text("Phone number") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                singleLine = true,
+                isError = formState.phoneNumberError != null,
+                supportingText = {
+                    formState.phoneNumberError?.let { Text(text = it) }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = formState.password,
+                onValueChange = onPasswordChanged,
+                label = { Text("Password") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true,
+                isError = formState.passwordError != null,
+                supportingText = {
+                    formState.passwordError?.let { Text(text = it) }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = formState.confirmPassword,
+                onValueChange = onConfirmPasswordChanged,
+                label = { Text("Confirm password") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true,
+                isError = formState.confirmPasswordError != null,
+                supportingText = {
+                    formState.confirmPasswordError?.let { Text(text = it) }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            feedbackMessage?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(onClick = onGoToLogin) {
-                Text(text = "Already have an account?")
+
+            Button(
+                onClick = onRegisterClick,
+                enabled = !isLoading && formState.canSubmit,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(vertical = 2.dp)
+                            .height(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(text = "Register")
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            TextButton(onClick = onBack) {
-                Text(text = "Back")
+
+            TextButton(
+                onClick = onGoToLogin,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Already have an account? Login")
             }
         }
     }
