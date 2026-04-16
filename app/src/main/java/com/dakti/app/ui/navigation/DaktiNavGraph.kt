@@ -1,4 +1,4 @@
-package com.dakti.app.ui.navigation
+﻿package com.dakti.app.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -38,6 +39,7 @@ import com.dakti.app.ui.screens.home.HomeScreen
 import com.dakti.app.ui.screens.invitations.InvitationsScreen
 import com.dakti.app.ui.screens.matches.CreateMatchScreen
 import com.dakti.app.ui.screens.matches.MatchDetailsScreen
+import com.dakti.app.ui.screens.matches.MatchesScreen
 import com.dakti.app.ui.screens.matches.MyMatchesScreen
 import com.dakti.app.ui.screens.profile.ProfileScreen
 import com.dakti.app.ui.screens.reservations.MyReservationsScreen
@@ -49,14 +51,16 @@ import com.dakti.app.ui.screens.venues.VenueListScreen
 fun DaktiNavGraph(startDestination: String) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = currentRoute in AppRoute.bottomNavRoutes
+    val currentDestination = backStackEntry?.destination
+    val showBottomBar = currentDestination
+        ?.hierarchy
+        ?.any { destination -> destination.route in AppRoute.bottomNavRoutes } == true
 
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
                 DaktiBottomNavigation(
-                    currentRoute = currentRoute,
+                    currentDestinationRoute = currentDestination?.route,
                     onNavigate = { route ->
                         navController.navigate(route) {
                             popUpTo(AppRoute.MainGraph.route) {
@@ -172,11 +176,12 @@ fun DaktiNavGraph(startDestination: String) {
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
                     HomeScreen(
-                        message = state.welcomeMessage,
+                        uiState = state,
                         onBrowseVenues = { navController.navigate(AppRoute.Venues.route) },
+                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.route) },
                         onMyReservations = { navController.navigate(AppRoute.MyReservations.route) },
                         onMyMatches = { navController.navigate(AppRoute.MyMatches.route) },
-                        onInvitations = { navController.navigate(AppRoute.Invitations.route) }
+                        onOpenAssistant = { navController.navigate(AppRoute.Assistant.route) }
                     )
                 }
 
@@ -185,11 +190,68 @@ fun DaktiNavGraph(startDestination: String) {
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
                     VenueListScreen(
+                        isLoading = state.isLoading,
                         venues = state.venues,
-                        onVenueClick = {
-                            viewModel.selectVenue("venue-1")
-                            navController.navigate(AppRoute.VenueDetails.create("venue-1"))
+                        errorMessage = state.errorMessage,
+                        onVenueClick = { venueId ->
+                            viewModel.selectVenue(venueId)
+                            navController.navigate(AppRoute.VenueDetails.create(venueId))
                         }
+                    )
+                }
+
+                composable(AppRoute.Matches.route) {
+                    val viewModel: MatchViewModel = hiltViewModel()
+                    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+                    MatchesScreen(
+                        isLoading = state.isLoading,
+                        openMatchesCount = state.openMatchesCount,
+                        matchesPreview = state.matches,
+                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.route) },
+                        onOpenMyMatches = { navController.navigate(AppRoute.MyMatches.route) },
+                        onOpenInvitations = { navController.navigate(AppRoute.Invitations.route) },
+                        onOpenMatchDetails = { matchId ->
+                            navController.navigate(AppRoute.MatchDetails.create(matchId))
+                        }
+                    )
+                }
+
+                composable(AppRoute.Assistant.route) {
+                    val viewModel: AssistantViewModel = hiltViewModel()
+                    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+                    AssistantScreen(
+                        isLoading = state.isLoading,
+                        suggestedPrompts = state.suggestedPrompts,
+                        messages = state.messages,
+                        onAskSuggestion = { prompt -> viewModel.askSuggestion(prompt) },
+                        onGoToInvitations = { navController.navigate(AppRoute.Invitations.route) }
+                    )
+                }
+
+                composable(AppRoute.Profile.route) {
+                    val profileViewModel: ProfileViewModel = hiltViewModel()
+                    val state by profileViewModel.uiState.collectAsStateWithLifecycle()
+
+                    LaunchedEffect(state.isLoggedOut) {
+                        if (state.isLoggedOut) {
+                            navController.navigate(AppRoute.AuthGraph.route) {
+                                popUpTo(AppRoute.MainGraph.route) { inclusive = true }
+                            }
+                            profileViewModel.onLogoutHandled()
+                        }
+                    }
+
+                    ProfileScreen(
+                        uiState = state,
+                        onDisplayNameChanged = profileViewModel::onDisplayNameChanged,
+                        onPhoneNumberChanged = profileViewModel::onPhoneNumberChanged,
+                        onAvatarUrlChanged = profileViewModel::onAvatarUrlChanged,
+                        onStartEditing = profileViewModel::startEditing,
+                        onCancelEditing = profileViewModel::cancelEditing,
+                        onSaveProfile = profileViewModel::saveProfile,
+                        onLogout = profileViewModel::logout
                     )
                 }
 
@@ -246,7 +308,9 @@ fun DaktiNavGraph(startDestination: String) {
                     MyMatchesScreen(
                         matches = state.matches,
                         onCreateMatch = { navController.navigate(AppRoute.CreateMatch.route) },
-                        onMatchClick = { navController.navigate(AppRoute.MatchDetails.create("match-1")) }
+                        onMatchClick = { matchId ->
+                            navController.navigate(AppRoute.MatchDetails.create(matchId))
+                        }
                     )
                 }
 
@@ -256,7 +320,7 @@ fun DaktiNavGraph(startDestination: String) {
                     CreateMatchScreen(
                         onCreateClick = {
                             viewModel.createDemoMatch()
-                            navController.navigate(AppRoute.MatchDetails.create("match-new"))
+                            navController.navigate(AppRoute.MyMatches.route)
                         },
                         onBack = { navController.popBackStack() }
                     )
@@ -283,42 +347,6 @@ fun DaktiNavGraph(startDestination: String) {
                         onBackToHome = { navController.navigate(AppRoute.Home.route) }
                     )
                 }
-
-                composable(AppRoute.Assistant.route) {
-                    val viewModel: AssistantViewModel = hiltViewModel()
-                    val state by viewModel.uiState.collectAsStateWithLifecycle()
-
-                    AssistantScreen(
-                        lastResponse = state.lastResponse,
-                        onAskSuggestion = { viewModel.askSuggestion() },
-                        onGoToInvitations = { navController.navigate(AppRoute.Invitations.route) }
-                    )
-                }
-
-                composable(AppRoute.Profile.route) {
-                    val profileViewModel: ProfileViewModel = hiltViewModel()
-                    val state by profileViewModel.uiState.collectAsStateWithLifecycle()
-
-                    LaunchedEffect(state.isLoggedOut) {
-                        if (state.isLoggedOut) {
-                            navController.navigate(AppRoute.AuthGraph.route) {
-                                popUpTo(AppRoute.MainGraph.route) { inclusive = true }
-                            }
-                            profileViewModel.onLogoutHandled()
-                        }
-                    }
-
-                    ProfileScreen(
-                        uiState = state,
-                        onDisplayNameChanged = profileViewModel::onDisplayNameChanged,
-                        onPhoneNumberChanged = profileViewModel::onPhoneNumberChanged,
-                        onAvatarUrlChanged = profileViewModel::onAvatarUrlChanged,
-                        onStartEditing = profileViewModel::startEditing,
-                        onCancelEditing = profileViewModel::cancelEditing,
-                        onSaveProfile = profileViewModel::saveProfile,
-                        onLogout = profileViewModel::logout
-                    )
-                }
             }
         }
     }
@@ -326,13 +354,13 @@ fun DaktiNavGraph(startDestination: String) {
 
 @Composable
 private fun DaktiBottomNavigation(
-    currentRoute: String?,
+    currentDestinationRoute: String?,
     onNavigate: (String) -> Unit
 ) {
     NavigationBar {
         daktiBottomNavItems.forEach { item ->
             NavigationBarItem(
-                selected = currentRoute == item.route,
+                selected = currentDestinationRoute == item.route,
                 onClick = { onNavigate(item.route) },
                 icon = {
                     Icon(imageVector = item.icon, contentDescription = item.label)
@@ -348,3 +376,4 @@ private fun DaktiBottomNavigation(
         }
     }
 }
+

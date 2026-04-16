@@ -1,4 +1,4 @@
-package com.dakti.app.ui.navigation
+﻿package com.dakti.app.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountCircle
@@ -17,7 +17,8 @@ data class BottomNavItem(
 val daktiBottomNavItems = listOf(
     BottomNavItem(route = AppRoute.Home.route, label = "Home", icon = Icons.Outlined.Home),
     BottomNavItem(route = AppRoute.Venues.route, label = "Venues", icon = Icons.Outlined.Stadium),
-    BottomNavItem(route = AppRoute.MyMatches.route, label = "Matches", icon = Icons.Outlined.SportsSoccer),
+    BottomNavItem(route = AppRoute.Matches.route, label = "Matches", icon = Icons.Outlined.SportsSoccer),
     BottomNavItem(route = AppRoute.Assistant.route, label = "Assistant", icon = Icons.Outlined.SmartToy),
     BottomNavItem(route = AppRoute.Profile.route, label = "Profile", icon = Icons.Outlined.AccountCircle)
 )
+

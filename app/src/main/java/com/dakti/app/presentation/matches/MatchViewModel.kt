@@ -1,4 +1,4 @@
-package com.dakti.app.presentation.matches
+﻿package com.dakti.app.presentation.matches
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,9 +12,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+data class MatchListItemUi(
+    val id: String,
+    val title: String,
+    val status: String,
+    val requiredPlayers: Int
+)
+
 data class MatchUiState(
-    val matches: List<String> = emptyList(),
-    val latestCreatedMatchId: String? = null
+    val isLoading: Boolean = false,
+    val matches: List<MatchListItemUi> = emptyList(),
+    val latestCreatedMatchId: String? = null,
+    val openMatchesCount: Int = 0,
+    val errorMessage: String? = null
 )
 
 @HiltViewModel
@@ -31,15 +41,41 @@ class MatchViewModel @Inject constructor(
 
     fun loadMatches() {
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             when (val result = matchRepository.getMyMatches()) {
                 is Resource.Success -> {
+                    val mapped = result.data.map { match ->
+                        MatchListItemUi(
+                            id = match.id,
+                            title = match.title,
+                            status = match.status.name,
+                            requiredPlayers = match.requiredPlayers
+                        )
+                    }
                     _uiState.update {
-                        it.copy(matches = result.data.map { match -> "${match.title} (${match.status})" })
+                        it.copy(
+                            isLoading = false,
+                            matches = mapped,
+                            openMatchesCount = mapped.count { item ->
+                                item.status.equals("OPEN", ignoreCase = true) ||
+                                    item.status.equals("DRAFT", ignoreCase = true)
+                            }
+                        )
                     }
                 }
 
-                is Resource.Error -> Unit
-                Resource.Loading -> Unit
+                is Resource.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = result.message
+                        )
+                    }
+                }
+
+                Resource.Loading -> {
+                    _uiState.update { it.copy(isLoading = true) }
+                }
             }
         }
     }
@@ -54,9 +90,13 @@ class MatchViewModel @Inject constructor(
                     loadMatches()
                 }
 
-                is Resource.Error -> Unit
+                is Resource.Error -> {
+                    _uiState.update { it.copy(errorMessage = result.message) }
+                }
+
                 Resource.Loading -> Unit
             }
         }
     }
 }
+

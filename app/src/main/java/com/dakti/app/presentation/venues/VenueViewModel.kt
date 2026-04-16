@@ -1,4 +1,4 @@
-package com.dakti.app.presentation.venues
+﻿package com.dakti.app.presentation.venues
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,10 +12,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+data class VenueListItemUi(
+    val id: String,
+    val name: String,
+    val sportType: String,
+    val city: String,
+    val pricePerHour: Double,
+    val currency: String
+)
+
 data class VenueUiState(
     val isLoading: Boolean = false,
-    val venues: List<String> = emptyList(),
-    val selectedVenueId: String? = null
+    val venues: List<VenueListItemUi> = emptyList(),
+    val selectedVenueId: String? = null,
+    val errorMessage: String? = null
 )
 
 @HiltViewModel
@@ -32,19 +42,33 @@ class VenueViewModel @Inject constructor(
 
     fun loadVenues() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             when (val result = venueRepository.getVenues()) {
                 is Resource.Success -> {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            venues = result.data.map { venue -> "${venue.name} (${venue.sportType})" }
+                            venues = result.data.map { venue ->
+                                VenueListItemUi(
+                                    id = venue.id,
+                                    name = venue.name,
+                                    sportType = venue.sportType,
+                                    city = venue.city,
+                                    pricePerHour = venue.pricePerHour,
+                                    currency = venue.currency
+                                )
+                            }
                         )
                     }
                 }
 
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false) }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = result.message
+                        )
+                    }
                 }
 
                 Resource.Loading -> {
@@ -58,3 +82,4 @@ class VenueViewModel @Inject constructor(
         _uiState.update { it.copy(selectedVenueId = venueId) }
     }
 }
+
