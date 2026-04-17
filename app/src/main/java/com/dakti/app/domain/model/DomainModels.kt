@@ -17,12 +17,13 @@ enum class ReservationStatus {
 }
 
 enum class MatchStatus {
-    DRAFT,
-    OPEN,
-    FULL,
+    ORGANIZING,
     CONFIRMED,
     CANCELLED,
-    COMPLETED
+    COMPLETED,
+    DRAFT,
+    OPEN,
+    FULL
 }
 
 enum class InvitationResponseStatus {
@@ -152,6 +153,36 @@ data class Match(
     val createdAt: Instant,
     val updatedAt: Instant
 )
+
+data class MatchCreatePayload(
+    val sportType: String,
+    val scheduledStartTime: Instant,
+    val requiredPlayers: Int,
+    val description: String?,
+    val venueId: String,
+    val reservationId: String?
+)
+
+data class MatchReservationContext(
+    val reservationId: String,
+    val venueId: String,
+    val venueName: String,
+    val venueAddress: String,
+    val sportType: String,
+    val scheduledStartTime: Instant,
+    val timeSlotLabel: String
+)
+
+data class MatchWithContext(
+    val match: Match,
+    val venueName: String,
+    val venueAddress: String,
+    val reservationReference: String?,
+    val organizerName: String?,
+    val confirmedPlayersCount: Int
+) {
+    val remainingSpots: Int = (match.requiredPlayers - confirmedPlayersCount).coerceAtLeast(0)
+}
 
 data class Invitation(
     val id: String,

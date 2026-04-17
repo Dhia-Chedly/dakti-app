@@ -44,6 +44,7 @@ data class ReservationUiState(
     val draft: ReservationDraftUi? = null,
     val isCreatingReservation: Boolean = false,
     val reservationCreatedMessage: String? = null,
+    val latestCreatedReservationId: String? = null,
     val confirmationErrorMessage: String? = null,
     val myReservations: List<ReservationHistoryItemUi> = emptyList(),
     val isHistoryLoading: Boolean = false,
@@ -74,6 +75,7 @@ class ReservationViewModel @Inject constructor(
                     isDraftLoading = true,
                     draft = null,
                     reservationCreatedMessage = null,
+                    latestCreatedReservationId = null,
                     confirmationErrorMessage = null
                 )
             }
@@ -138,6 +140,7 @@ class ReservationViewModel @Inject constructor(
                 it.copy(
                     isCreatingReservation = true,
                     reservationCreatedMessage = null,
+                    latestCreatedReservationId = null,
                     confirmationErrorMessage = null
                 )
             }
@@ -155,6 +158,7 @@ class ReservationViewModel @Inject constructor(
                             isCreatingReservation = false,
                             draft = draft.copy(isSlotAvailable = false),
                             reservationCreatedMessage = "Reservation confirmed for ${result.data.venueName}.",
+                            latestCreatedReservationId = result.data.id,
                             confirmationErrorMessage = null
                         )
                     }
@@ -166,6 +170,7 @@ class ReservationViewModel @Inject constructor(
                         it.copy(
                             isCreatingReservation = false,
                             reservationCreatedMessage = null,
+                            latestCreatedReservationId = null,
                             confirmationErrorMessage = result.message
                         )
                     }
@@ -218,6 +223,7 @@ class ReservationViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 reservationCreatedMessage = null,
+                latestCreatedReservationId = null,
                 confirmationErrorMessage = null
             )
         }

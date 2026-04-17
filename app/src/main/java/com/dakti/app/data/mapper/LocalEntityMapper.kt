@@ -4,6 +4,7 @@ import com.dakti.app.data.local.entity.AIRequestEntity
 import com.dakti.app.data.local.entity.AISuggestionEntity
 import com.dakti.app.data.local.entity.InvitationEntity
 import com.dakti.app.data.local.entity.MatchEntity
+import com.dakti.app.data.local.entity.MatchWithContextRelation
 import com.dakti.app.data.local.entity.MatchWithInvitationsRelation
 import com.dakti.app.data.local.entity.NotificationEntity
 import com.dakti.app.data.local.entity.OrganizerEntity
@@ -18,7 +19,9 @@ import com.dakti.app.data.local.entity.VenueWithTimeSlotsRelation
 import com.dakti.app.domain.model.AIRequest
 import com.dakti.app.domain.model.AISuggestion
 import com.dakti.app.domain.model.Invitation
+import com.dakti.app.domain.model.InvitationResponseStatus
 import com.dakti.app.domain.model.Match
+import com.dakti.app.domain.model.MatchWithContext
 import com.dakti.app.domain.model.MatchWithInvitations
 import com.dakti.app.domain.model.Notification
 import com.dakti.app.domain.model.Organizer
@@ -286,6 +289,20 @@ fun MatchWithInvitationsRelation.toDomain(): MatchWithInvitations =
         match = match.toDomain(),
         invitations = invitations.map { invitation ->
             invitation.toDomain(matchTitle = match.title, fromUser = invitation.invitedByOrganizerId ?: match.organizerId)
+        }
+    )
+
+fun MatchWithContextRelation.toDomain(
+    organizerName: String?
+): MatchWithContext =
+    MatchWithContext(
+        match = match.toDomain(),
+        venueName = venue.name,
+        venueAddress = venue.address,
+        reservationReference = reservation?.id,
+        organizerName = organizerName,
+        confirmedPlayersCount = invitations.count { invitation ->
+            invitation.status == InvitationResponseStatus.ACCEPTED
         }
     )
 

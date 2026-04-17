@@ -20,7 +20,6 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -31,11 +30,13 @@ import com.dakti.app.ui.components.SectionHeader
 @Composable
 fun MatchesScreen(
     isLoading: Boolean,
+    errorMessage: String?,
     openMatchesCount: Int,
     matchesPreview: List<MatchListItemUi>,
     onCreateMatch: () -> Unit,
     onOpenMyMatches: () -> Unit,
     onOpenInvitations: () -> Unit,
+    onRefresh: () -> Unit,
     onOpenMatchDetails: (String) -> Unit
 ) {
     Scaffold(
@@ -116,34 +117,33 @@ fun MatchesScreen(
                 }
             }
 
-            if (!isLoading && matchesPreview.isEmpty()) {
+            if (!isLoading && errorMessage != null) {
                 item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = "No matches yet. Use Create to set up your first game.",
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
+                    MatchEmptyState(
+                        title = "Could not load matches",
+                        message = errorMessage,
+                        actionLabel = "Try Again",
+                        onActionClick = onRefresh
+                    )
+                }
+            }
+
+            if (!isLoading && errorMessage == null && matchesPreview.isEmpty()) {
+                item {
+                    MatchEmptyState(
+                        title = "No matches yet",
+                        message = "Use Create to set up your first game.",
+                        actionLabel = "Refresh",
+                        onActionClick = onRefresh
+                    )
                 }
             }
 
             items(matchesPreview.take(4)) { item ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = item.title,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = "${item.status} • ${item.requiredPlayers} players",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        TextButton(onClick = { onOpenMatchDetails(item.id) }) {
-                            Text(text = "Open match")
-                        }
-                    }
-                }
+                MatchCard(
+                    match = item,
+                    onOpenDetails = onOpenMatchDetails
+                )
             }
         }
     }

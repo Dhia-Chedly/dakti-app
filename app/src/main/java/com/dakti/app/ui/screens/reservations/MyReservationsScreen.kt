@@ -4,6 +4,7 @@ package com.dakti.app.ui.screens.reservations
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,6 +25,7 @@ fun MyReservationsScreen(
     reservations: List<ReservationHistoryItemUi>,
     errorMessage: String?,
     onRefresh: () -> Unit,
+    onCreateMatchFromReservation: (String) -> Unit,
     onBackToHome: () -> Unit
 ) {
     Scaffold(
@@ -72,6 +74,12 @@ fun MyReservationsScreen(
             if (!isLoading && reservations.isNotEmpty()) {
                 items(reservations, key = { reservation -> reservation.id }) { reservation ->
                     ReservationCard(reservation = reservation)
+                    TextButton(
+                        onClick = { onCreateMatchFromReservation(reservation.id) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Create Match from this Reservation")
+                    }
                 }
             }
 

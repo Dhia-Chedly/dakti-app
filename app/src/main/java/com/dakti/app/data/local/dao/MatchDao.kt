@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.dakti.app.data.local.entity.MatchEntity
+import com.dakti.app.data.local.entity.MatchWithContextRelation
 import com.dakti.app.data.local.entity.MatchWithInvitationsRelation
 import kotlinx.coroutines.flow.Flow
 
@@ -27,6 +28,16 @@ interface MatchDao {
 
     @Query("SELECT * FROM matches WHERE organizerId = :organizerId ORDER BY scheduledStartTime ASC")
     fun observeMatchesByOrganizer(organizerId: String): Flow<List<MatchEntity>>
+
+    @Transaction
+    @Query("SELECT * FROM matches WHERE organizerId = :organizerId ORDER BY scheduledStartTime ASC")
+    suspend fun getMatchesWithContextByOrganizer(
+        organizerId: String
+    ): List<MatchWithContextRelation>
+
+    @Transaction
+    @Query("SELECT * FROM matches WHERE id = :matchId LIMIT 1")
+    suspend fun getMatchWithContextById(matchId: String): MatchWithContextRelation?
 
     @Transaction
     @Query("SELECT * FROM matches WHERE id = :matchId LIMIT 1")

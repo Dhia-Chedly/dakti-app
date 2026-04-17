@@ -178,7 +178,7 @@ fun DaktiNavGraph(startDestination: String) {
                     HomeScreen(
                         uiState = state,
                         onBrowseVenues = { navController.navigate(AppRoute.Venues.route) },
-                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.route) },
+                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.create(null)) },
                         onMyReservations = { navController.navigate(AppRoute.MyReservations.route) },
                         onMyMatches = { navController.navigate(AppRoute.MyMatches.route) },
                         onOpenAssistant = { navController.navigate(AppRoute.Assistant.route) }
@@ -209,11 +209,13 @@ fun DaktiNavGraph(startDestination: String) {
 
                     MatchesScreen(
                         isLoading = state.isLoading,
+                        errorMessage = state.errorMessage,
                         openMatchesCount = state.openMatchesCount,
                         matchesPreview = state.matches,
-                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.route) },
+                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.create(null)) },
                         onOpenMyMatches = { navController.navigate(AppRoute.MyMatches.route) },
                         onOpenInvitations = { navController.navigate(AppRoute.Invitations.route) },
+                        onRefresh = viewModel::refreshMatchesModule,
                         onOpenMatchDetails = { matchId ->
                             navController.navigate(AppRoute.MatchDetails.create(matchId))
                         }
@@ -309,7 +311,11 @@ fun DaktiNavGraph(startDestination: String) {
                         onConfirm = viewModel::confirmReservation,
                         onBack = { navController.popBackStack() },
                         onMyReservationsClick = { navController.navigate(AppRoute.MyReservations.route) },
-                        onCreateMatchPlaceholder = { navController.navigate(AppRoute.CreateMatch.route) },
+                        onCreateMatchPlaceholder = {
+                            navController.navigate(
+                                AppRoute.CreateMatch.create(state.latestCreatedReservationId)
+                            )
+                        },
                         onHomeClick = {
                             navController.navigate(AppRoute.Home.route) {
                                 popUpTo(AppRoute.Home.route) { inclusive = false }
@@ -327,6 +333,9 @@ fun DaktiNavGraph(startDestination: String) {
                         reservations = state.myReservations,
                         errorMessage = state.historyErrorMessage,
                         onRefresh = viewModel::loadMyReservations,
+                        onCreateMatchFromReservation = { reservationId ->
+                            navController.navigate(AppRoute.CreateMatch.create(reservationId))
+                        },
                         onBackToHome = {
                             navController.navigate(AppRoute.Home.route) {
                                 popUpTo(AppRoute.Home.route) { inclusive = false }
@@ -340,22 +349,50 @@ fun DaktiNavGraph(startDestination: String) {
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
                     MyMatchesScreen(
+                        isLoading = state.isLoading,
                         matches = state.matches,
-                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.route) },
+                        errorMessage = state.errorMessage,
+                        onRefresh = viewModel::refreshMatchesModule,
+                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.create(null)) },
                         onMatchClick = { matchId ->
                             navController.navigate(AppRoute.MatchDetails.create(matchId))
                         }
                     )
                 }
 
-                composable(AppRoute.CreateMatch.route) {
+                composable(
+                    route = AppRoute.CreateMatch.route,
+                    arguments = listOf(
+                        navArgument(AppRoute.CreateMatch.RESERVATION_ID_ARG) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { entry ->
                     val viewModel: MatchViewModel = hiltViewModel()
+                    val state by viewModel.uiState.collectAsStateWithLifecycle()
+                    val reservationId = entry.arguments?.getString(AppRoute.CreateMatch.RESERVATION_ID_ARG)
+
+                    LaunchedEffect(reservationId) {
+                        viewModel.onCreateScreenOpened(reservationId)
+                    }
 
                     CreateMatchScreen(
-                        onCreateClick = {
-                            viewModel.createDemoMatch()
-                            navController.navigate(AppRoute.MyMatches.route)
-                        },
+                        formState = state.formState,
+                        reservationContexts = state.reservationContexts,
+                        venueOptions = state.venueOptions,
+                        isSubmitting = state.isCreatingMatch,
+                        isCreateEnabled = state.isCreateEnabled,
+                        successMessage = state.createSuccessMessage,
+                        errorMessage = state.createErrorMessage,
+                        onReservationSelected = viewModel::onReservationContextSelected,
+                        onVenueSelected = viewModel::onVenueSelected,
+                        onSportTypeChanged = viewModel::onSportTypeChanged,
+                        onScheduledAtChanged = viewModel::onScheduledAtChanged,
+                        onRequiredPlayersChanged = viewModel::onRequiredPlayersChanged,
+                        onDescriptionChanged = viewModel::onDescriptionChanged,
+                        onCreateClick = viewModel::createMatch,
                         onBack = { navController.popBackStack() }
                     )
                 }
@@ -365,9 +402,21 @@ fun DaktiNavGraph(startDestination: String) {
                     arguments = listOf(navArgument("matchId") { type = NavType.StringType })
                 ) { entry ->
                     val matchId = entry.arguments?.getString("matchId").orEmpty()
+                    val viewModel: MatchViewModel = hiltViewModel()
+                    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+                    LaunchedEffect(matchId) {
+                        viewModel.loadMatchDetails(matchId)
+                    }
+
                     MatchDetailsScreen(
-                        matchId = matchId,
-                        onBack = { navController.popBackStack() }
+                        isLoading = state.isDetailsLoading,
+                        details = state.selectedMatchDetails,
+                        errorMessage = state.detailsErrorMessage,
+                        onBack = { navController.popBackStack() },
+                        onInvitePlayers = { navController.navigate(AppRoute.Invitations.route) },
+                        onSendReminder = { },
+                        onAddToCalendar = { }
                     )
                 }
 

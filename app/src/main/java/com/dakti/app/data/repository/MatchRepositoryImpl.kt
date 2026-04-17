@@ -1,20 +1,26 @@
 package com.dakti.app.data.repository
 
 import com.dakti.app.data.local.dao.MatchDao
+import com.dakti.app.data.local.dao.ReservationDao
 import com.dakti.app.data.local.dao.UserDao
 import com.dakti.app.data.local.dao.VenueDao
+import com.dakti.app.data.local.session.SessionLocalDataSource
 import com.dakti.app.data.mapper.toDomain
 import com.dakti.app.data.mapper.toEntity
 import com.dakti.app.domain.model.Match
+import com.dakti.app.domain.model.MatchCreatePayload
+import com.dakti.app.domain.model.MatchReservationContext
 import com.dakti.app.domain.model.MatchStatus
+import com.dakti.app.domain.model.MatchWithContext
 import com.dakti.app.domain.model.MatchWithInvitations
 import com.dakti.app.domain.model.Organizer
 import com.dakti.app.domain.model.User
 import com.dakti.app.domain.model.UserRole
-import com.dakti.app.domain.model.Venue
 import com.dakti.app.domain.repository.MatchRepository
 import com.dakti.app.util.Resource
 import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -22,49 +28,101 @@ import kotlinx.coroutines.flow.map
 
 class MatchRepositoryImpl @Inject constructor(
     private val matchDao: MatchDao,
+    private val reservationDao: ReservationDao,
     private val venueDao: VenueDao,
-    private val userDao: UserDao
+    private val userDao: UserDao,
+    private val sessionLocalDataSource: SessionLocalDataSource
 ) : MatchRepository {
 
-    override suspend fun getMyMatches(): Resource<List<Match>> {
-        ensureDemoOrganizerProfile()
-        return Resource.Success(
-            matchDao.getMatchesByOrganizer(DEMO_ORGANIZER_ID)
-                .map { entity -> entity.toDomain() }
-        )
+    override suspend fun getMyMatches(): Resource<List<MatchWithContext>> {
+        val organizerId = resolveOrganizerId()
+        val organizerName = userDao.getUserById(organizerId)?.displayName
+        val matches = matchDao.getMatchesWithContextByOrganizer(organizerId)
+            .map { relation -> relation.toDomain(organizerName = organizerName) }
+        return Resource.Success(matches)
     }
 
-    override suspend fun createMatch(title: String): Resource<Match> {
-        ensureDemoOrganizerProfile()
-        ensureVenueExists()
+    override suspend fun createMatch(payload: MatchCreatePayload): Resource<MatchWithContext> {
+        val organizerId = resolveOrganizerId()
+        if (payload.requiredPlayers < MIN_REQUIRED_PLAYERS) {
+            return Resource.Error("A match requires at least $MIN_REQUIRED_PLAYERS players")
+        }
 
-        val venue = venueDao.getVenuesOnce().firstOrNull()
-            ?: return Resource.Error("Create a venue before creating matches")
+        val venue = venueDao.getVenueById(payload.venueId)
+            ?: return Resource.Error("Selected venue is no longer available")
+
+        val reservation = payload.reservationId?.let { reservationId ->
+            val reservationDetails = reservationDao.getReservationWithDetails(reservationId)
+                ?: return Resource.Error("Linked reservation not found")
+            if (reservationDetails.reservation.organizerId != organizerId) {
+                return Resource.Error("You can only create matches from your own reservations")
+            }
+            if (reservationDetails.reservation.venueId != payload.venueId) {
+                return Resource.Error("Reservation does not belong to selected venue")
+            }
+            reservationDetails
+        }
 
         val now = Instant.now()
         val match = Match(
             id = "match-${UUID.randomUUID()}",
-            organizerId = DEMO_ORGANIZER_ID,
+            organizerId = organizerId,
             venueId = venue.id,
-            reservationId = null,
-            title = title,
-            sportType = venue.sportType,
-            scheduledStartTime = now.plusSeconds(24L * 3600L),
-            requiredPlayers = 10,
-            status = MatchStatus.DRAFT,
-            description = null,
+            reservationId = reservation?.reservation?.id,
+            title = "${payload.sportType} Match",
+            sportType = payload.sportType,
+            scheduledStartTime = payload.scheduledStartTime,
+            requiredPlayers = payload.requiredPlayers,
+            status = MatchStatus.ORGANIZING,
+            description = payload.description?.trim()?.takeIf { value -> value.isNotBlank() },
             createdAt = now,
             updatedAt = now
         )
 
         matchDao.upsertMatch(match.toEntity())
-        return Resource.Success(match)
+        return getMatchDetails(match.id)
     }
 
-    override suspend fun getMatchDetails(matchId: String): Resource<Match> {
-        val match = matchDao.getMatchById(matchId)?.toDomain()
+    override suspend fun getMatchDetails(matchId: String): Resource<MatchWithContext> {
+        val relation = matchDao.getMatchWithContextById(matchId)
             ?: return Resource.Error("Match not found")
-        return Resource.Success(match)
+        val organizerName = userDao.getUserById(relation.match.organizerId)?.displayName
+        return Resource.Success(relation.toDomain(organizerName = organizerName))
+    }
+
+    override suspend fun getReservationContextsForCurrentOrganizer(): Resource<List<MatchReservationContext>> {
+        val organizerId = resolveOrganizerId()
+        val reservations = reservationDao.getReservationsWithDetailsByOrganizer(organizerId)
+            .map { relation ->
+                MatchReservationContext(
+                    reservationId = relation.reservation.id,
+                    venueId = relation.venue.id,
+                    venueName = relation.venue.name,
+                    venueAddress = relation.venue.address,
+                    sportType = relation.venue.sportType,
+                    scheduledStartTime = Instant.ofEpochMilli(relation.timeSlot.startTime),
+                    timeSlotLabel = formatTimeSlot(
+                        startMillis = relation.timeSlot.startTime,
+                        endMillis = relation.timeSlot.endTime
+                    )
+                )
+            }
+        return Resource.Success(reservations)
+    }
+
+    override suspend fun updateMatchStatus(
+        matchId: String,
+        status: MatchStatus
+    ): Resource<Unit> {
+        val match = matchDao.getMatchById(matchId)
+            ?: return Resource.Error("Match not found")
+        matchDao.updateMatch(
+            match.copy(
+                status = status,
+                updatedAt = Instant.now().toEpochMilli()
+            )
+        )
+        return Resource.Success(Unit)
     }
 
     override fun observeMatchesByOrganizer(organizerId: String): Flow<List<Match>> =
@@ -80,6 +138,46 @@ class MatchRepositoryImpl @Inject constructor(
         return Resource.Success(match)
     }
 
+    private suspend fun resolveOrganizerId(): String {
+        val sessionUserId = sessionLocalDataSource.authenticatedUserId.value
+        if (sessionUserId.isNullOrBlank()) {
+            ensureDemoOrganizerProfile()
+            return DEMO_ORGANIZER_ID
+        }
+
+        val user = userDao.getUserById(sessionUserId)
+        if (user == null) {
+            ensureDemoOrganizerProfile()
+            return DEMO_ORGANIZER_ID
+        }
+
+        ensureOrganizerProfileForUser(user.id, user.displayName)
+        return user.id
+    }
+
+    private suspend fun ensureOrganizerProfileForUser(
+        userId: String,
+        displayName: String
+    ) {
+        val withProfiles = userDao.getUserWithProfiles(userId)
+        if (withProfiles?.organizer != null) {
+            return
+        }
+
+        val now = Instant.now()
+        userDao.upsertOrganizer(
+            Organizer(
+                userId = userId,
+                rating = 0.0,
+                totalHostedMatches = 0,
+                organizationName = "$displayName Hosts",
+                isVerified = false,
+                createdAt = now,
+                updatedAt = now
+            ).toEntity()
+        )
+    }
+
     private suspend fun ensureDemoOrganizerProfile() {
         val now = Instant.now()
         userDao.upsertUser(
@@ -90,7 +188,7 @@ class MatchRepositoryImpl @Inject constructor(
                 phoneNumber = null,
                 avatarUrl = null,
                 role = UserRole.BOTH,
-                bio = null,
+                bio = "Host profile seed",
                 createdAt = now,
                 updatedAt = now
             ).toEntity()
@@ -109,36 +207,17 @@ class MatchRepositoryImpl @Inject constructor(
         )
     }
 
-    private suspend fun ensureVenueExists() {
-        if (venueDao.getVenuesOnce().isNotEmpty()) {
-            return
-        }
-
-        val now = Instant.now()
-        venueDao.upsertVenue(
-            Venue(
-                id = "venue-default",
-                name = "Dakti Demo Arena",
-                sportType = "Football",
-                description = "Seed venue for early development flows.",
-                address = "1 Demo Street",
-                contactPhone = null,
-                imageUrl = null,
-                city = "Lagos",
-                state = "Lagos",
-                country = "Nigeria",
-                latitude = null,
-                longitude = null,
-                pricePerHour = 10000.0,
-                currency = "NGN",
-                amenities = emptyList(),
-                createdAt = now,
-                updatedAt = now
-            ).toEntity()
-        )
+    private fun formatTimeSlot(startMillis: Long, endMillis: Long): String {
+        val zoneId = ZoneId.systemDefault()
+        val start = Instant.ofEpochMilli(startMillis).atZone(zoneId)
+        val end = Instant.ofEpochMilli(endMillis).atZone(zoneId)
+        return "${start.format(slotStartFormatter)} - ${end.format(slotEndFormatter)}"
     }
 
     companion object {
         private const val DEMO_ORGANIZER_ID: String = "organizer-demo"
+        private const val MIN_REQUIRED_PLAYERS: Int = 2
+        private val slotStartFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, d MMM HH:mm")
+        private val slotEndFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
 }

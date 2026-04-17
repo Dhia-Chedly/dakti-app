@@ -110,3 +110,23 @@ data class MatchWithInvitationsRelation(
     )
     val invitations: List<InvitationEntity>
 )
+
+data class MatchWithContextRelation(
+    @Embedded
+    val match: MatchEntity,
+    @Relation(
+        parentColumn = "venueId",
+        entityColumn = "id"
+    )
+    val venue: VenueEntity,
+    @Relation(
+        parentColumn = "reservationId",
+        entityColumn = "id"
+    )
+    val reservation: ReservationEntity?,
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "matchId"
+    )
+    val invitations: List<InvitationEntity>
+)
