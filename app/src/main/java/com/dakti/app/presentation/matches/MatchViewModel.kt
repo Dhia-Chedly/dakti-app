@@ -51,7 +51,10 @@ data class MatchListItemUi(
     val status: MatchStatus,
     val statusLabel: String,
     val requiredPlayers: Int,
+    val invitedPlayersCount: Int,
     val confirmedPlayersCount: Int,
+    val pendingPlayersCount: Int,
+    val declinedPlayersCount: Int,
     val remainingSpots: Int
 )
 
@@ -65,7 +68,10 @@ data class MatchDetailsUi(
     val status: MatchStatus,
     val statusLabel: String,
     val requiredPlayers: Int,
+    val invitedPlayersCount: Int,
     val confirmedPlayersCount: Int,
+    val pendingPlayersCount: Int,
+    val declinedPlayersCount: Int,
     val remainingSpots: Int,
     val organizerName: String?,
     val reservationReference: String?,
@@ -467,7 +473,10 @@ class MatchViewModel @Inject constructor(
             status = match.status,
             statusLabel = match.status.toDisplayLabel(),
             requiredPlayers = match.requiredPlayers,
+            invitedPlayersCount = invitedPlayersCount,
             confirmedPlayersCount = confirmedPlayersCount,
+            pendingPlayersCount = pendingPlayersCount,
+            declinedPlayersCount = declinedPlayersCount,
             remainingSpots = remainingSpots
         )
 
@@ -482,7 +491,10 @@ class MatchViewModel @Inject constructor(
             status = match.status,
             statusLabel = match.status.toDisplayLabel(),
             requiredPlayers = match.requiredPlayers,
+            invitedPlayersCount = invitedPlayersCount,
             confirmedPlayersCount = confirmedPlayersCount,
+            pendingPlayersCount = pendingPlayersCount,
+            declinedPlayersCount = declinedPlayersCount,
             remainingSpots = remainingSpots,
             organizerName = organizerName,
             reservationReference = reservationReference,

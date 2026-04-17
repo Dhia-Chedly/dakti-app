@@ -41,6 +41,9 @@ sealed class AppRoute(val route: String) {
     data object MyMatches : AppRoute("my_matches")
 
     data object Invitations : AppRoute("invitations")
+    data object InvitePlayers : AppRoute("invite_players/{matchId}") {
+        fun create(matchId: String): String = "invite_players/$matchId"
+    }
 
     companion object {
         val bottomNavRoutes = setOf(

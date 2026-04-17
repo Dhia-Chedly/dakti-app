@@ -36,6 +36,13 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE id = :userId LIMIT 1")
     suspend fun getUserWithProfiles(userId: String): UserWithProfilesRelation?
 
+    @Transaction
+    @Query("SELECT * FROM users ORDER BY displayName ASC")
+    suspend fun getAllUsersWithProfiles(): List<UserWithProfilesRelation>
+
+    @Query("SELECT * FROM users WHERE id IN (:userIds)")
+    suspend fun getUsersByIds(userIds: List<String>): List<UserEntity>
+
     @Query("DELETE FROM users WHERE id = :userId")
     suspend fun deleteUserById(userId: String)
 }

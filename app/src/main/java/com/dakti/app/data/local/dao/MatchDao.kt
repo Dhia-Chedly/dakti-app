@@ -40,6 +40,10 @@ interface MatchDao {
     suspend fun getMatchWithContextById(matchId: String): MatchWithContextRelation?
 
     @Transaction
+    @Query("SELECT * FROM matches WHERE id IN (:matchIds)")
+    suspend fun getMatchesWithContextByIds(matchIds: List<String>): List<MatchWithContextRelation>
+
+    @Transaction
     @Query("SELECT * FROM matches WHERE id = :matchId LIMIT 1")
     fun observeMatchWithInvitations(matchId: String): Flow<MatchWithInvitationsRelation?>
 

@@ -179,7 +179,10 @@ data class MatchWithContext(
     val venueAddress: String,
     val reservationReference: String?,
     val organizerName: String?,
-    val confirmedPlayersCount: Int
+    val invitedPlayersCount: Int,
+    val confirmedPlayersCount: Int,
+    val pendingPlayersCount: Int,
+    val declinedPlayersCount: Int
 ) {
     val remainingSpots: Int = (match.requiredPlayers - confirmedPlayersCount).coerceAtLeast(0)
 }
@@ -191,6 +194,38 @@ data class Invitation(
     val invitedByOrganizerId: String?,
     val matchTitle: String,
     val fromUser: String,
+    val status: InvitationResponseStatus,
+    val message: String?,
+    val sentAt: Instant,
+    val respondedAt: Instant?
+)
+
+data class InvitePlayerCandidate(
+    val playerId: String,
+    val displayName: String,
+    val email: String,
+    val phoneNumber: String?,
+    val preferredSport: String,
+    val availabilityNote: String?,
+    val skillLevel: String?,
+    val invitationStatus: InvitationResponseStatus?
+) {
+    val isAlreadyInvited: Boolean = invitationStatus != null
+}
+
+data class InvitationWithContext(
+    val invitationId: String,
+    val matchId: String,
+    val playerId: String,
+    val playerName: String,
+    val organizerId: String?,
+    val organizerName: String,
+    val matchTitle: String,
+    val sportType: String,
+    val venueName: String,
+    val venueAddress: String,
+    val scheduledStartTime: Instant,
+    val requiredPlayers: Int,
     val status: InvitationResponseStatus,
     val message: String?,
     val sentAt: Instant,

@@ -3,26 +3,31 @@
 package com.dakti.app.ui.screens.invitations
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.dakti.app.presentation.invitations.InvitationItemUi
 
 @Composable
 fun InvitationsScreen(
-    invitations: List<String>,
-    onAcceptAll: () -> Unit,
+    isLoading: Boolean,
+    invitations: List<InvitationItemUi>,
+    errorMessage: String?,
+    actionMessage: String?,
+    onAccept: (String) -> Unit,
+    onDecline: (String) -> Unit,
+    onRefresh: () -> Unit,
     onBackToHome: () -> Unit
 ) {
     Scaffold(
@@ -36,25 +41,72 @@ fun InvitationsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Button(onClick = onAcceptAll) {
-                    Text(text = "Accept All (Placeholder)")
-                }
+                Text(
+                    text = "Review incoming match invites and confirm your participation.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
-            items(invitations) { invitation ->
-                Card(modifier = Modifier.fillMaxWidth()) {
+
+            actionMessage?.takeIf { message -> message.isNotBlank() }?.let { message ->
+                item {
                     Text(
-                        text = invitation,
-                        modifier = Modifier.padding(16.dp)
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
+
+            if (isLoading) {
+                item { CircularProgressIndicator() }
+            }
+
+            if (!isLoading && errorMessage != null) {
+                item {
+                    InvitationsEmptyState(
+                        title = "Could not load invitations",
+                        message = errorMessage
+                    )
+                }
+            }
+
+            if (!isLoading && errorMessage == null && invitations.isEmpty()) {
+                item {
+                    InvitationsEmptyState(
+                        title = "No invitations yet",
+                        message = "When organizers invite you to a match, invitations will appear here."
+                    )
+                }
+            }
+
+            if (!isLoading && invitations.isNotEmpty()) {
+                items(invitations, key = { item -> item.invitationId }) { invitation ->
+                    InvitationCard(
+                        invitation = invitation,
+                        onAccept = onAccept,
+                        onDecline = onDecline
+                    )
+                }
+            }
+
             item {
-                Column {
-                    TextButton(onClick = onBackToHome) {
-                        Text(text = "Back to Home")
-                    }
+                TextButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Refresh")
+                }
+            }
+
+            item {
+                TextButton(
+                    onClick = onBackToHome,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Back to Home")
                 }
             }
         }
     }
 }
+

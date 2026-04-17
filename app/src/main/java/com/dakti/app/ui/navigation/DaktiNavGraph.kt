@@ -7,11 +7,15 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavType
@@ -36,6 +40,7 @@ import com.dakti.app.ui.screens.auth.RegisterScreen
 import com.dakti.app.ui.screens.auth.SplashScreen
 import com.dakti.app.ui.screens.auth.WelcomeScreen
 import com.dakti.app.ui.screens.home.HomeScreen
+import com.dakti.app.ui.screens.invitations.InvitePlayersScreen
 import com.dakti.app.ui.screens.invitations.InvitationsScreen
 import com.dakti.app.ui.screens.matches.CreateMatchScreen
 import com.dakti.app.ui.screens.matches.MatchDetailsScreen
@@ -404,9 +409,22 @@ fun DaktiNavGraph(startDestination: String) {
                     val matchId = entry.arguments?.getString("matchId").orEmpty()
                     val viewModel: MatchViewModel = hiltViewModel()
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
+                    val lifecycleOwner = LocalLifecycleOwner.current
 
                     LaunchedEffect(matchId) {
                         viewModel.loadMatchDetails(matchId)
+                    }
+
+                    DisposableEffect(lifecycleOwner, matchId) {
+                        val observer = LifecycleEventObserver { _, event ->
+                            if (event == Lifecycle.Event.ON_RESUME) {
+                                viewModel.loadMatchDetails(matchId)
+                            }
+                        }
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose {
+                            lifecycleOwner.lifecycle.removeObserver(observer)
+                        }
                     }
 
                     MatchDetailsScreen(
@@ -414,7 +432,7 @@ fun DaktiNavGraph(startDestination: String) {
                         details = state.selectedMatchDetails,
                         errorMessage = state.detailsErrorMessage,
                         onBack = { navController.popBackStack() },
-                        onInvitePlayers = { navController.navigate(AppRoute.Invitations.route) },
+                        onInvitePlayers = { navController.navigate(AppRoute.InvitePlayers.create(matchId)) },
                         onSendReminder = { },
                         onAddToCalendar = { }
                     )
@@ -424,10 +442,45 @@ fun DaktiNavGraph(startDestination: String) {
                     val viewModel: InvitationViewModel = hiltViewModel()
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
+                    LaunchedEffect(Unit) {
+                        viewModel.loadPlayerInvitations()
+                    }
+
                     InvitationsScreen(
+                        isLoading = state.isLoading,
                         invitations = state.invitations,
-                        onAcceptAll = { viewModel.acceptAllPlaceholders() },
+                        errorMessage = state.errorMessage,
+                        actionMessage = state.actionMessage,
+                        onAccept = { invitationId ->
+                            viewModel.respondToInvitation(invitationId = invitationId, accept = true)
+                        },
+                        onDecline = { invitationId ->
+                            viewModel.respondToInvitation(invitationId = invitationId, accept = false)
+                        },
+                        onRefresh = viewModel::loadPlayerInvitations,
                         onBackToHome = { navController.navigate(AppRoute.Home.route) }
+                    )
+                }
+
+                composable(
+                    route = AppRoute.InvitePlayers.route,
+                    arguments = listOf(navArgument("matchId") { type = NavType.StringType })
+                ) { entry ->
+                    val matchId = entry.arguments?.getString("matchId").orEmpty()
+                    val viewModel: InvitationViewModel = hiltViewModel()
+                    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+                    LaunchedEffect(matchId) {
+                        viewModel.loadInvitePlayers(matchId)
+                    }
+
+                    InvitePlayersScreen(
+                        uiState = state.invitePlayers,
+                        onMessageChanged = viewModel::onInviteMessageChanged,
+                        onTogglePlayer = viewModel::togglePlayerSelection,
+                        onSendInvitations = viewModel::sendInvitations,
+                        onRefresh = { viewModel.loadInvitePlayers(matchId) },
+                        onBack = { navController.popBackStack() }
                     )
                 }
             }

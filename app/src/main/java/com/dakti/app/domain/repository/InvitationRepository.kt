@@ -1,14 +1,21 @@
 package com.dakti.app.domain.repository
 
-import com.dakti.app.domain.model.Invitation
+import com.dakti.app.domain.model.InvitationResponseStatus
+import com.dakti.app.domain.model.InvitationWithContext
+import com.dakti.app.domain.model.InvitePlayerCandidate
 import com.dakti.app.util.Resource
-import kotlinx.coroutines.flow.Flow
 
 interface InvitationRepository {
-    suspend fun getInvitations(): Resource<List<Invitation>>
-    suspend fun respondToInvitation(invitationId: String, accepted: Boolean): Resource<Unit>
-
-    fun observeInvitationsByPlayer(playerId: String): Flow<List<Invitation>>
-    fun observeInvitationsByMatch(matchId: String): Flow<List<Invitation>>
-    suspend fun saveInvitation(invitation: Invitation): Resource<Invitation>
+    suspend fun getInvitationsForCurrentPlayer(): Resource<List<InvitationWithContext>>
+    suspend fun getInvitationsForMatch(matchId: String): Resource<List<InvitationWithContext>>
+    suspend fun getInviteCandidates(matchId: String): Resource<List<InvitePlayerCandidate>>
+    suspend fun invitePlayers(
+        matchId: String,
+        playerIds: List<String>,
+        message: String?
+    ): Resource<Int>
+    suspend fun respondToInvitation(
+        invitationId: String,
+        status: InvitationResponseStatus
+    ): Resource<Unit>
 }

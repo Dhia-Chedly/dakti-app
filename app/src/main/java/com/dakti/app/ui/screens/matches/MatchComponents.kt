@@ -86,6 +86,10 @@ fun MatchCard(
                 requiredPlayers = match.requiredPlayers
             )
             Text(
+                text = "Invited: ${match.invitedPlayersCount} | Pending: ${match.pendingPlayersCount} | Declined: ${match.declinedPlayersCount}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
                 text = "Remaining spots: ${match.remainingSpots}",
                 style = MaterialTheme.typography.bodySmall
             )
@@ -130,6 +134,18 @@ fun MatchSummaryCard(details: MatchDetailsUi) {
             PlayersProgressIndicator(
                 confirmedPlayers = details.confirmedPlayersCount,
                 requiredPlayers = details.requiredPlayers
+            )
+            Text(
+                text = "Invited players: ${details.invitedPlayersCount}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Pending invitations: ${details.pendingPlayersCount}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Declined invitations: ${details.declinedPlayersCount}",
+                style = MaterialTheme.typography.bodySmall
             )
             Text(
                 text = "Remaining spots: ${details.remainingSpots}",
@@ -189,4 +205,3 @@ fun MatchEmptyState(
         }
     }
 }
-

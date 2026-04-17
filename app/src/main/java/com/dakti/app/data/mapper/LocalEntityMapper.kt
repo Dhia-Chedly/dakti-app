@@ -301,8 +301,15 @@ fun MatchWithContextRelation.toDomain(
         venueAddress = venue.address,
         reservationReference = reservation?.id,
         organizerName = organizerName,
+        invitedPlayersCount = invitations.size,
         confirmedPlayersCount = invitations.count { invitation ->
             invitation.status == InvitationResponseStatus.ACCEPTED
+        },
+        pendingPlayersCount = invitations.count { invitation ->
+            invitation.status == InvitationResponseStatus.PENDING
+        },
+        declinedPlayersCount = invitations.count { invitation ->
+            invitation.status == InvitationResponseStatus.DECLINED
         }
     )
 
