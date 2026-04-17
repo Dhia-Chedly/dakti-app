@@ -36,7 +36,7 @@ import com.dakti.app.data.local.entity.VenueEntity
         AIRequestEntity::class,
         AISuggestionEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(DbTypeConverters::class)

@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 
 data class ReservationUiState(
     val reservations: List<String> = emptyList(),
-    val confirmationMessage: String = "No reservation action yet."
+    val confirmationMessage: String = "Reservation flow will be completed in the next phase."
 )
 
 @HiltViewModel

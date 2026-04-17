@@ -190,13 +190,16 @@ fun DaktiNavGraph(startDestination: String) {
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
                     VenueListScreen(
+                        searchQuery = state.searchQuery,
+                        sportFilters = state.sportFilters,
+                        selectedSportFilter = state.selectedSportFilter,
                         isLoading = state.isLoading,
-                        venues = state.venues,
+                        venues = state.filteredVenues,
                         errorMessage = state.errorMessage,
-                        onVenueClick = { venueId ->
-                            viewModel.selectVenue(venueId)
-                            navController.navigate(AppRoute.VenueDetails.create(venueId))
-                        }
+                        onSearchQueryChanged = viewModel::onSearchQueryChanged,
+                        onSportFilterSelected = viewModel::onSportFilterSelected,
+                        onRetry = viewModel::refreshVenues,
+                        onVenueClick = { venueId -> navController.navigate(AppRoute.VenueDetails.create(venueId)) }
                     )
                 }
 
@@ -260,14 +263,19 @@ fun DaktiNavGraph(startDestination: String) {
                     arguments = listOf(navArgument("venueId") { type = NavType.StringType })
                 ) { entry ->
                     val venueId = entry.arguments?.getString("venueId").orEmpty()
-                    val reservationViewModel: ReservationViewModel = hiltViewModel()
+                    val venueViewModel: VenueViewModel = hiltViewModel()
+                    val state by venueViewModel.uiState.collectAsStateWithLifecycle()
+
+                    LaunchedEffect(venueId) {
+                        venueViewModel.loadVenueDetails(venueId)
+                    }
 
                     VenueDetailsScreen(
-                        venueId = venueId,
-                        onReserveClick = {
-                            reservationViewModel.confirmReservationForVenue(venueId)
-                            navController.navigate(AppRoute.ReservationConfirmation.route)
-                        },
+                        isLoading = state.isDetailsLoading,
+                        venueDetails = state.selectedVenueDetails,
+                        errorMessage = state.detailsErrorMessage,
+                        onContinueToReservation = { navController.navigate(AppRoute.ReservationConfirmation.route) },
+                        onRetry = { venueViewModel.loadVenueDetails(venueId) },
                         onBack = { navController.popBackStack() }
                     )
                 }

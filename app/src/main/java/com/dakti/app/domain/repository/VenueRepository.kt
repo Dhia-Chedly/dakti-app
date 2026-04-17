@@ -9,6 +9,12 @@ import kotlinx.coroutines.flow.Flow
 interface VenueRepository {
     suspend fun getVenues(): Resource<List<Venue>>
     suspend fun getVenueDetails(venueId: String): Resource<Venue>
+    suspend fun searchVenues(
+        query: String,
+        sportType: String? = null
+    ): Resource<List<VenueWithTimeSlots>>
+    suspend fun getVenueWithTimeSlots(venueId: String): Resource<VenueWithTimeSlots>
+    suspend fun getSportTypes(): Resource<List<String>>
 
     fun observeVenues(): Flow<List<Venue>>
     fun observeVenueWithSlots(venueId: String): Flow<VenueWithTimeSlots?>

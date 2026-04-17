@@ -122,6 +122,8 @@ class MatchRepositoryImpl @Inject constructor(
                 sportType = "Football",
                 description = "Seed venue for early development flows.",
                 address = "1 Demo Street",
+                contactPhone = null,
+                imageUrl = null,
                 city = "Lagos",
                 state = "Lagos",
                 country = "Nigeria",

@@ -21,6 +21,8 @@ data class VenueEntity(
     val sportType: String,
     val description: String?,
     val address: String,
+    val contactPhone: String?,
+    val imageUrl: String?,
     val city: String,
     val state: String?,
     val country: String,

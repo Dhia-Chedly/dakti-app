@@ -23,6 +23,33 @@ interface VenueDao {
     @Query("SELECT * FROM venues ORDER BY name ASC")
     suspend fun getVenuesOnce(): List<VenueEntity>
 
+    @Transaction
+    @Query("SELECT * FROM venues ORDER BY name ASC")
+    suspend fun getVenuesWithTimeSlotsOnce(): List<VenueWithTimeSlotsRelation>
+
+    @Transaction
+    @Query(
+        """
+        SELECT * FROM venues
+        WHERE (
+            :query = '' OR
+            LOWER(name) LIKE '%' || LOWER(:query) || '%' OR
+            LOWER(city) LIKE '%' || LOWER(:query) || '%' OR
+            LOWER(address) LIKE '%' || LOWER(:query) || '%'
+        )
+        AND (
+            :sportType IS NULL OR
+            :sportType = '' OR
+            LOWER(sportType) = LOWER(:sportType)
+        )
+        ORDER BY name ASC
+        """
+    )
+    suspend fun searchVenuesWithTimeSlots(
+        query: String,
+        sportType: String?
+    ): List<VenueWithTimeSlotsRelation>
+
     @Query("SELECT * FROM venues ORDER BY name ASC")
     fun observeVenues(): Flow<List<VenueEntity>>
 
@@ -47,6 +74,13 @@ interface VenueDao {
     @Transaction
     @Query("SELECT * FROM venues WHERE id = :venueId LIMIT 1")
     fun observeVenueWithTimeSlots(venueId: String): Flow<VenueWithTimeSlotsRelation?>
+
+    @Transaction
+    @Query("SELECT * FROM venues WHERE id = :venueId LIMIT 1")
+    suspend fun getVenueWithTimeSlotsOnce(venueId: String): VenueWithTimeSlotsRelation?
+
+    @Query("SELECT DISTINCT sportType FROM venues ORDER BY sportType ASC")
+    suspend fun getSportTypes(): List<String>
 
     @Query("DELETE FROM time_slots WHERE venueId = :venueId")
     suspend fun deleteTimeSlotsByVenue(venueId: String)

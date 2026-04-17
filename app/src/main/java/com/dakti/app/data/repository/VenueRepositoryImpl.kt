@@ -9,7 +9,6 @@ import com.dakti.app.domain.model.VenueWithTimeSlots
 import com.dakti.app.domain.repository.VenueRepository
 import com.dakti.app.util.Resource
 import java.time.Instant
-import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -28,6 +27,30 @@ class VenueRepositoryImpl @Inject constructor(
         val venue = venueDao.getVenueById(venueId)?.toDomain()
             ?: return Resource.Error("Venue not found")
         return Resource.Success(venue)
+    }
+
+    override suspend fun searchVenues(
+        query: String,
+        sportType: String?
+    ): Resource<List<VenueWithTimeSlots>> {
+        seedIfEmpty()
+        val results = venueDao.searchVenuesWithTimeSlots(
+            query = query.trim(),
+            sportType = sportType?.trim()?.takeIf { value -> value.isNotEmpty() }
+        ).map { relation -> relation.toDomain() }
+        return Resource.Success(results)
+    }
+
+    override suspend fun getVenueWithTimeSlots(venueId: String): Resource<VenueWithTimeSlots> {
+        seedIfEmpty()
+        val venue = venueDao.getVenueWithTimeSlotsOnce(venueId)?.toDomain()
+            ?: return Resource.Error("Venue details unavailable")
+        return Resource.Success(venue)
+    }
+
+    override suspend fun getSportTypes(): Resource<List<String>> {
+        seedIfEmpty()
+        return Resource.Success(venueDao.getSportTypes())
     }
 
     override fun observeVenues(): Flow<List<Venue>> =
@@ -54,11 +77,13 @@ class VenueRepositoryImpl @Inject constructor(
         val now = Instant.now()
         val venues = listOf(
             Venue(
-                id = "venue-1",
+                id = "venue-football-001",
                 name = "Central Football Arena",
                 sportType = "Football",
-                description = "Outdoor 5-a-side pitch with lights.",
+                description = "Synthetic 5-a-side pitch with floodlights and changing rooms.",
                 address = "15 Unity Avenue",
+                contactPhone = "+234-803-000-1001",
+                imageUrl = null,
                 city = "Lagos",
                 state = "Lagos",
                 country = "Nigeria",
@@ -71,36 +96,40 @@ class VenueRepositoryImpl @Inject constructor(
                 updatedAt = now
             ),
             Venue(
-                id = "venue-2",
-                name = "City Padel Hub",
-                sportType = "Padel",
-                description = "Indoor padel courts with lounge area.",
+                id = "venue-basketball-001",
+                name = "Metro Basketball Court",
+                sportType = "Basketball",
+                description = "Indoor full court with spectator seats and scoreboard.",
                 address = "42 Marina Road",
+                contactPhone = "+234-803-000-1002",
+                imageUrl = null,
                 city = "Lagos",
                 state = "Lagos",
                 country = "Nigeria",
                 latitude = 6.4498,
                 longitude = 3.3995,
-                pricePerHour = 18000.0,
+                pricePerHour = 15000.0,
                 currency = "NGN",
-                amenities = listOf("Locker", "Cafe", "Showers"),
+                amenities = listOf("Locker room", "Scoreboard", "Water station"),
                 createdAt = now,
                 updatedAt = now
             ),
             Venue(
-                id = "venue-3",
-                name = "North Tennis Club",
+                id = "venue-tennis-001",
+                name = "Northside Tennis Club",
                 sportType = "Tennis",
-                description = "Hard courts for training and friendlies.",
+                description = "Hard courts suitable for training, doubles, and friendly sets.",
                 address = "9 Airport Link",
+                contactPhone = "+234-803-000-1003",
+                imageUrl = null,
                 city = "Abuja",
                 state = "FCT",
                 country = "Nigeria",
                 latitude = 9.0765,
                 longitude = 7.3986,
-                pricePerHour = 15000.0,
+                pricePerHour = 14000.0,
                 currency = "NGN",
-                amenities = listOf("Ball machine", "Pro shop"),
+                amenities = listOf("Pro shop", "Ball machine", "Rest area"),
                 createdAt = now,
                 updatedAt = now
             )
@@ -108,28 +137,38 @@ class VenueRepositoryImpl @Inject constructor(
 
         venueDao.upsertVenues(venues.map { venue -> venue.toEntity() })
 
-        val slots = venues.flatMapIndexed { index, venue ->
-            val baseStart = now.plusSeconds((index + 1L) * 7200L)
-            listOf(
-                TimeSlot(
-                    id = "slot-${UUID.randomUUID()}",
-                    venueId = venue.id,
-                    startTime = baseStart,
-                    endTime = baseStart.plusSeconds(90L * 60L),
-                    isAvailable = true,
-                    capacity = 14
-                ),
-                TimeSlot(
-                    id = "slot-${UUID.randomUUID()}",
-                    venueId = venue.id,
-                    startTime = baseStart.plusSeconds(2L * 3600L),
-                    endTime = baseStart.plusSeconds((2L * 3600L) + (90L * 60L)),
-                    isAvailable = true,
-                    capacity = 14
-                )
-            )
-        }
+        val baseStart = now.plusSeconds(6L * 3600L)
+        val slots = listOf(
+            buildSlot("slot-football-1", "venue-football-001", baseStart, 90L, true, 14),
+            buildSlot("slot-football-2", "venue-football-001", baseStart.plusSeconds(2L * 3600L), 90L, false, 14),
+            buildSlot("slot-football-3", "venue-football-001", baseStart.plusSeconds(4L * 3600L), 90L, true, 14),
+            buildSlot("slot-basketball-1", "venue-basketball-001", baseStart.plusSeconds(3600L), 120L, true, 10),
+            buildSlot("slot-basketball-2", "venue-basketball-001", baseStart.plusSeconds(3L * 3600L), 120L, false, 10),
+            buildSlot("slot-basketball-3", "venue-basketball-001", baseStart.plusSeconds(5L * 3600L), 120L, true, 10),
+            buildSlot("slot-tennis-1", "venue-tennis-001", baseStart.plusSeconds(30L * 60L), 60L, false, 4),
+            buildSlot("slot-tennis-2", "venue-tennis-001", baseStart.plusSeconds(2L * 3600L), 60L, true, 4),
+            buildSlot("slot-tennis-3", "venue-tennis-001", baseStart.plusSeconds(6L * 3600L), 60L, true, 4)
+        )
 
         venueDao.upsertTimeSlots(slots.map { slot -> slot.toEntity() })
+    }
+
+    private fun buildSlot(
+        id: String,
+        venueId: String,
+        startTime: Instant,
+        durationMinutes: Long,
+        isAvailable: Boolean,
+        capacity: Int
+    ): TimeSlot {
+        val endTime = startTime.plusSeconds(durationMinutes * 60L)
+        return TimeSlot(
+            id = id,
+            venueId = venueId,
+            startTime = startTime,
+            endTime = endTime,
+            isAvailable = isAvailable,
+            capacity = capacity
+        )
     }
 }
