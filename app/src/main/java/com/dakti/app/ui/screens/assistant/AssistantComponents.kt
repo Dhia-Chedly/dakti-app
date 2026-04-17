@@ -8,19 +8,25 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.dakti.app.domain.model.AssistantGeneratedMessageKind
 import com.dakti.app.domain.model.AssistantMessageRole
+import com.dakti.app.presentation.assistant.AssistantActionProposalUi
+import com.dakti.app.presentation.assistant.AssistantGeneratedMessageUi
 import com.dakti.app.presentation.assistant.AssistantMessageUi
 import com.dakti.app.presentation.assistant.AssistantQuickActionUi
 import com.dakti.app.presentation.assistant.AssistantSuggestionUi
+import com.dakti.app.presentation.assistant.AssistantVenueSuggestionUi
 
 @Composable
 fun ChatMessageBubble(message: AssistantMessageUi) {
@@ -45,6 +51,13 @@ fun ChatMessageBubble(message: AssistantMessageUi) {
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            message.intentLabel?.let { label ->
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
             Text(
                 text = message.text,
                 style = MaterialTheme.typography.bodyMedium
@@ -107,6 +120,150 @@ fun AssistantSuggestionCard(suggestion: AssistantSuggestionUi) {
 }
 
 @Composable
+fun AssistantVenueSuggestionCard(
+    suggestion: AssistantVenueSuggestionUi,
+    onUseThisOption: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = suggestion.venueName,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = suggestion.timeSlotLabel,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = suggestion.venueAddress,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = suggestion.reason,
+                style = MaterialTheme.typography.bodySmall
+            )
+            suggestion.slotCapacity?.let { capacity ->
+                Text(
+                    text = "Slot capacity: $capacity",
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+            if (suggestion.isPreferredTime) {
+                Text(
+                    text = "Matches preferred time",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            OutlinedButton(
+                onClick = { onUseThisOption(suggestion.timeSlotId) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Use This Option")
+            }
+        }
+    }
+}
+
+@Composable
+fun AssistantGeneratedMessageCard(generated: AssistantGeneratedMessageUi) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = generated.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = when (generated.kind) {
+                    AssistantGeneratedMessageKind.INVITATION -> "Invitation Content"
+                    AssistantGeneratedMessageKind.REMINDER -> "Reminder Content"
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = generated.content,
+                style = MaterialTheme.typography.bodySmall
+            )
+            if (generated.variants.isNotEmpty()) {
+                Text(
+                    text = "Variants",
+                    style = MaterialTheme.typography.labelMedium
+                )
+                generated.variants.forEach { variant ->
+                    Text(
+                        text = "- $variant",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AssistantActionProposalCard(
+    proposal: AssistantActionProposalUi,
+    isExecuting: Boolean,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = proposal.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = proposal.summary,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onConfirm,
+                    enabled = !isExecuting,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = if (isExecuting) "Executing..." else "Confirm")
+                }
+                OutlinedButton(
+                    onClick = onCancel,
+                    enabled = !isExecuting,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = "Cancel")
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun AssistantEmptyState() {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -122,7 +279,7 @@ fun AssistantEmptyState() {
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "Ask me for help with venue planning, match organization, invitation messaging, reminders, and rescheduling.",
+                text = "I can organize a match from one request, suggest venues/alternative slots, and generate invitation or reminder messages.",
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -139,7 +296,7 @@ fun AssistantLoadingMessage() {
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
         ) {
             Text(
-                text = "Assistant is typing...",
+                text = "Assistant is analyzing your request...",
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                 style = MaterialTheme.typography.bodySmall
             )

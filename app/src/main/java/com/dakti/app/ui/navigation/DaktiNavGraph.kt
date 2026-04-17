@@ -237,8 +237,12 @@ fun DaktiNavGraph(startDestination: String) {
                         onSendMessage = viewModel::sendCurrentMessage,
                         onPromptSelected = viewModel::sendSuggestedPrompt,
                         onQuickActionSelected = viewModel::sendQuickAction,
+                        onUseVenueSuggestion = viewModel::useVenueSuggestion,
+                        onConfirmAction = viewModel::confirmPendingAction,
+                        onCancelAction = viewModel::cancelPendingAction,
                         onRetry = viewModel::retryLastFailedMessage,
-                        onDismissError = viewModel::clearError
+                        onDismissError = viewModel::clearError,
+                        onDismissActionResult = viewModel::clearActionResultMessage
                     )
                 }
 

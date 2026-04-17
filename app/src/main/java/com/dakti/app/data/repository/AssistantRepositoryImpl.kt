@@ -1,21 +1,21 @@
 package com.dakti.app.data.repository
 
-import com.dakti.app.ai.parser.AssistantResponseParser
-import com.dakti.app.ai.prompt.PromptBuilder
-import com.dakti.app.ai.service.AiAssistantRequest
-import com.dakti.app.ai.service.AiAssistantService
-import com.dakti.app.ai.service.AiAssistantTurn
-import com.dakti.app.ai.suggestion.SuggestionEngine
+import com.dakti.app.ai.service.AssistantOrchestrator
 import com.dakti.app.data.local.dao.AssistantDao
 import com.dakti.app.data.local.dao.UserDao
 import com.dakti.app.data.local.session.SessionLocalDataSource
 import com.dakti.app.data.mapper.toEntity
 import com.dakti.app.domain.model.AIRequest
 import com.dakti.app.domain.model.AISuggestion
+import com.dakti.app.domain.model.AssistantActionExecutionResult
+import com.dakti.app.domain.model.AssistantActionProposal
+import com.dakti.app.domain.model.AssistantContext
 import com.dakti.app.domain.model.AssistantConversationMessage
-import com.dakti.app.domain.model.AssistantMessageRole
+import com.dakti.app.domain.model.AssistantGeneratedMessage
 import com.dakti.app.domain.model.AssistantQuickAction
 import com.dakti.app.domain.model.AssistantReply
+import com.dakti.app.domain.model.AssistantStructuredRequest
+import com.dakti.app.domain.model.AssistantVenueSuggestion
 import com.dakti.app.domain.model.User
 import com.dakti.app.domain.model.UserRole
 import com.dakti.app.domain.repository.AssistantRepository
@@ -25,84 +25,118 @@ import java.util.UUID
 import javax.inject.Inject
 
 class AssistantRepositoryImpl @Inject constructor(
-    private val aiAssistantService: AiAssistantService,
+    private val orchestrator: AssistantOrchestrator,
     private val assistantDao: AssistantDao,
     private val userDao: UserDao,
-    private val sessionLocalDataSource: SessionLocalDataSource,
-    private val suggestionEngine: SuggestionEngine
+    private val sessionLocalDataSource: SessionLocalDataSource
 ) : AssistantRepository {
 
-    override suspend fun sendAssistantMessage(
+    override suspend fun interpretAssistantRequest(
         message: String,
-        conversationHistory: List<AssistantConversationMessage>
+        conversationHistory: List<AssistantConversationMessage>,
+        context: AssistantContext?
     ): Resource<AssistantReply> {
-        val normalizedMessage = message.trim()
-        if (normalizedMessage.isBlank()) {
-            return Resource.Error("Message cannot be empty")
-        }
-
-        val promptConversation = conversationHistory.map { item ->
-            AiAssistantTurn(
-                role = if (item.role == AssistantMessageRole.USER) "user" else "assistant",
-                text = item.text
-            )
-        }
-
-        val requestPayload = AiAssistantRequest(
-            systemPrompt = PromptBuilder.buildSystemPrompt(),
-            compiledPrompt = PromptBuilder.buildChatPrompt(
-                userMessage = normalizedMessage,
-                conversation = promptConversation
-            ),
-            conversation = promptConversation,
-            userMessage = normalizedMessage
-        )
-
-        return try {
-            val serviceResponse = aiAssistantService.generateReply(requestPayload)
-            val parsedResponse = AssistantResponseParser.parse(serviceResponse.rawText)
-            val suggestionItems = suggestionEngine.buildSuggestionItems(
-                parsedSuggestions = parsedResponse.suggestions,
-                userMessage = normalizedMessage
+        return runCatching {
+            val reply = orchestrator.interpretRequest(
+                message = message,
+                conversationHistory = conversationHistory,
+                context = context
             )
             logAssistantRequestAndSuggestions(
-                userMessage = normalizedMessage,
-                suggestions = suggestionItems.map { item ->
+                userMessage = message,
+                suggestions = reply.suggestions.map { item ->
                     AISuggestion(
                         id = "ai-sg-${UUID.randomUUID()}",
                         requestId = "",
                         type = item.type,
-                        suggestionText = buildSuggestionText(
-                            title = item.title,
-                            description = item.description
-                        ),
+                        suggestionText = if (item.description.isNullOrBlank()) {
+                            item.title
+                        } else {
+                            "${item.title}: ${item.description}"
+                        },
                         confidenceScore = null,
                         createdAt = Instant.now()
                     )
                 }
             )
+            Resource.Success(reply)
+        }.getOrElse { exception ->
+            Resource.Error(exception.message ?: "Assistant is unavailable right now.")
+        }
+    }
 
-            Resource.Success(
-                AssistantReply(
-                    text = parsedResponse.replyText,
-                    suggestions = suggestionItems,
-                    quickActions = suggestionEngine.defaultQuickActions(),
-                    providerLabel = serviceResponse.providerLabel,
-                    usedFallback = serviceResponse.usedFallback
-                )
-            )
-        } catch (exception: Exception) {
-            Resource.Error(
-                exception.message ?: "Assistant is unavailable right now. Please try again."
-            )
+    override suspend fun suggestVenues(
+        request: AssistantStructuredRequest
+    ): Resource<List<AssistantVenueSuggestion>> =
+        orchestrator.suggestVenues(request)
+
+    override suspend fun suggestAlternativeSlots(
+        request: AssistantStructuredRequest
+    ): Resource<List<AssistantVenueSuggestion>> =
+        orchestrator.suggestAlternativeSlots(request)
+
+    override suspend fun organizeMatchFromRequest(
+        request: AssistantStructuredRequest
+    ): Resource<AssistantReply> =
+        orchestrator.organizeMatchFromRequest(request)
+
+    override suspend fun generateInvitationMessage(
+        request: AssistantStructuredRequest
+    ): Resource<AssistantGeneratedMessage> =
+        orchestrator.generateInvitationMessage(request)
+
+    override suspend fun generateReminderMessage(
+        request: AssistantStructuredRequest
+    ): Resource<AssistantGeneratedMessage> =
+        orchestrator.generateReminderMessage(request)
+
+    override suspend fun executeAssistantAction(
+        proposal: AssistantActionProposal
+    ): Resource<AssistantActionExecutionResult> {
+        return runCatching {
+            Resource.Success(orchestrator.executeAction(proposal))
+        }.getOrElse { exception ->
+            Resource.Error(exception.message ?: "Could not execute assistant action.")
         }
     }
 
     override fun getQuickActions(): List<AssistantQuickAction> =
-        suggestionEngine.defaultQuickActions()
+        listOf(
+            AssistantQuickAction(
+                id = "organize_match",
+                title = "Organize Match",
+                prompt = "Organize a football match for Saturday at 6 PM for 10 players"
+            ),
+            AssistantQuickAction(
+                id = "suggest_venue",
+                title = "Suggest Venue",
+                prompt = "Suggest football venues available tomorrow evening"
+            ),
+            AssistantQuickAction(
+                id = "alternative_slots",
+                title = "Alternative Slot",
+                prompt = "Suggest another time if my preferred slot is unavailable"
+            ),
+            AssistantQuickAction(
+                id = "generate_invitation",
+                title = "Generate Invitation",
+                prompt = "Generate invitation message for my upcoming match"
+            ),
+            AssistantQuickAction(
+                id = "generate_reminder",
+                title = "Generate Reminder",
+                prompt = "Generate reminder message for tomorrow's match"
+            )
+        )
 
     override fun getSuggestedPrompts(): List<String> =
-        suggestionEngine.defaultPromptSuggestions()
+        listOf(
+            "Organize a football match for Saturday at 6 PM for 10 players",
+            "Suggest available basketball venues around 7 PM tomorrow",
+            "Suggest another time because my preferred slot is unavailable",
+            "Generate invitation message for my upcoming match",
+            "Generate reminder message for tomorrow's match"
+        )
 
     private suspend fun logAssistantRequestAndSuggestions(
         userMessage: String,
@@ -118,7 +152,7 @@ class AssistantRepositoryImpl @Inject constructor(
                     id = requestId,
                     userId = userId,
                     promptText = userMessage,
-                    contextType = "assistant_chat",
+                    contextType = "assistant_orchestrator",
                     createdAt = now
                 ).toEntity()
             )
@@ -191,19 +225,7 @@ class AssistantRepositoryImpl @Inject constructor(
         )
     }
 
-    private fun buildSuggestionText(
-        title: String,
-        description: String?
-    ): String {
-        return if (description.isNullOrBlank()) {
-            title
-        } else {
-            "$title: $description"
-        }
-    }
-
     private companion object {
         private const val DEMO_ASSISTANT_USER_ID: String = "assistant-demo-user"
     }
 }
-

@@ -58,6 +58,28 @@ enum class AssistantMessageRole {
     ASSISTANT
 }
 
+enum class AssistantIntent {
+    ORGANIZE_MATCH,
+    SUGGEST_VENUE,
+    SUGGEST_ALTERNATIVE_SLOT,
+    GENERATE_INVITATION_MESSAGE,
+    GENERATE_REMINDER_MESSAGE,
+    RESCHEDULE_HELP,
+    GENERAL_CHAT
+}
+
+enum class AssistantGeneratedMessageKind {
+    INVITATION,
+    REMINDER
+}
+
+enum class AssistantActionType {
+    NONE,
+    CREATE_RESERVATION_ONLY,
+    CREATE_MATCH_FROM_RESERVATION,
+    CREATE_RESERVATION_AND_MATCH
+}
+
 data class User(
     val id: String,
     val displayName: String,
@@ -277,11 +299,72 @@ data class AssistantConversationMessage(
     val createdAt: Instant
 )
 
+data class AssistantContext(
+    val sourceRoute: String?,
+    val matchId: String?,
+    val reservationId: String?,
+    val venueId: String?
+)
+
+data class AssistantStructuredRequest(
+    val rawText: String,
+    val intent: AssistantIntent,
+    val sportType: String?,
+    val preferredDateTime: Instant?,
+    val desiredPlayers: Int?,
+    val venuePreference: String?,
+    val targetMatchId: String?,
+    val context: AssistantContext?
+)
+
 data class AssistantSuggestionItem(
     val id: String,
     val type: AISuggestionType,
     val title: String,
     val description: String?
+)
+
+data class AssistantVenueSuggestion(
+    val venueId: String,
+    val venueName: String,
+    val venueAddress: String,
+    val sportType: String,
+    val timeSlotId: String,
+    val timeSlotLabel: String,
+    val startTime: Instant,
+    val endTime: Instant,
+    val slotCapacity: Int?,
+    val isPreferredTime: Boolean,
+    val reason: String
+)
+
+data class AssistantGeneratedMessage(
+    val kind: AssistantGeneratedMessageKind,
+    val title: String,
+    val content: String,
+    val variants: List<String>
+)
+
+data class AssistantActionProposal(
+    val id: String,
+    val type: AssistantActionType,
+    val title: String,
+    val summary: String,
+    val requiresConfirmation: Boolean,
+    val venueId: String?,
+    val timeSlotId: String?,
+    val sportType: String?,
+    val requiredPlayers: Int?,
+    val scheduledStartTime: Instant?,
+    val reservationId: String?,
+    val description: String?
+)
+
+data class AssistantActionExecutionResult(
+    val success: Boolean,
+    val message: String,
+    val createdReservationId: String?,
+    val createdMatchId: String?
 )
 
 data class AssistantQuickAction(
@@ -292,7 +375,12 @@ data class AssistantQuickAction(
 
 data class AssistantReply(
     val text: String,
+    val intent: AssistantIntent,
+    val parsedRequest: AssistantStructuredRequest?,
     val suggestions: List<AssistantSuggestionItem>,
+    val venueSuggestions: List<AssistantVenueSuggestion>,
+    val generatedMessage: AssistantGeneratedMessage?,
+    val actionProposal: AssistantActionProposal?,
     val quickActions: List<AssistantQuickAction>,
     val providerLabel: String,
     val usedFallback: Boolean

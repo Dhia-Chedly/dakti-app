@@ -38,8 +38,12 @@ fun AssistantScreen(
     onSendMessage: () -> Unit,
     onPromptSelected: (String) -> Unit,
     onQuickActionSelected: (AssistantQuickActionUi) -> Unit,
+    onUseVenueSuggestion: (messageId: String, suggestionId: String) -> Unit,
+    onConfirmAction: () -> Unit,
+    onCancelAction: () -> Unit,
     onRetry: () -> Unit,
-    onDismissError: () -> Unit
+    onDismissError: () -> Unit,
+    onDismissActionResult: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -60,7 +64,7 @@ fun AssistantScreen(
             ) {
                 item {
                     Text(
-                        text = "Dakti AI Assistant",
+                        text = "AI Organizer Assistant",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -116,10 +120,26 @@ fun AssistantScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         ChatMessageBubble(message = message)
+
                         if (message.suggestions.isNotEmpty()) {
                             message.suggestions.forEach { suggestion ->
                                 AssistantSuggestionCard(suggestion = suggestion)
                             }
+                        }
+
+                        if (message.venueSuggestions.isNotEmpty()) {
+                            message.venueSuggestions.forEach { venueSuggestion ->
+                                AssistantVenueSuggestionCard(
+                                    suggestion = venueSuggestion,
+                                    onUseThisOption = { suggestionId ->
+                                        onUseVenueSuggestion(message.id, suggestionId)
+                                    }
+                                )
+                            }
+                        }
+
+                        message.generatedMessage?.let { generatedMessage ->
+                            AssistantGeneratedMessageCard(generated = generatedMessage)
                         }
                     }
                 }
@@ -127,6 +147,47 @@ fun AssistantScreen(
                 if (uiState.isLoading) {
                     item {
                         AssistantLoadingMessage()
+                    }
+                }
+            }
+
+            uiState.pendingActionProposal?.let { proposal ->
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AssistantActionProposalCard(
+                        proposal = proposal,
+                        isExecuting = uiState.isExecutingAction,
+                        onConfirm = onConfirmAction,
+                        onCancel = onCancelAction
+                    )
+                }
+            }
+
+            uiState.actionResultMessage?.takeIf { message -> message.isNotBlank() }?.let { message ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = message,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        TextButton(
+                            onClick = onDismissActionResult,
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text(text = "Dismiss")
+                        }
                     }
                 }
             }
@@ -175,7 +236,7 @@ fun AssistantScreen(
                     value = uiState.inputText,
                     onValueChange = onInputChanged,
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text(text = "Ask assistant...") },
+                    placeholder = { Text(text = "Ask assistant to organize, suggest, or draft...") },
                     maxLines = 4
                 )
                 FilledIconButton(
@@ -191,3 +252,4 @@ fun AssistantScreen(
         }
     }
 }
+
