@@ -125,6 +125,19 @@ data class Reservation(
     val updatedAt: Instant
 )
 
+data class ReservationDraft(
+    val organizerId: String,
+    val venueId: String,
+    val venueName: String,
+    val venueAddress: String,
+    val venueSportType: String,
+    val timeSlotId: String,
+    val timeSlotLabel: String,
+    val totalPrice: Double?,
+    val currency: String?,
+    val isSlotAvailable: Boolean
+)
+
 data class Match(
     val id: String,
     val organizerId: String,

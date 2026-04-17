@@ -273,20 +273,43 @@ fun DaktiNavGraph(startDestination: String) {
                     VenueDetailsScreen(
                         isLoading = state.isDetailsLoading,
                         venueDetails = state.selectedVenueDetails,
+                        selectedSlotId = state.selectedSlotId,
                         errorMessage = state.detailsErrorMessage,
-                        onContinueToReservation = { navController.navigate(AppRoute.ReservationConfirmation.route) },
+                        onSlotSelected = venueViewModel::selectTimeSlot,
+                        onContinueToReservation = { slotId ->
+                            navController.navigate(AppRoute.ReservationConfirmation.create(venueId, slotId))
+                        },
                         onRetry = { venueViewModel.loadVenueDetails(venueId) },
                         onBack = { navController.popBackStack() }
                     )
                 }
 
-                composable(AppRoute.ReservationConfirmation.route) {
+                composable(
+                    route = AppRoute.ReservationConfirmation.route,
+                    arguments = listOf(
+                        navArgument("venueId") { type = NavType.StringType },
+                        navArgument("timeSlotId") { type = NavType.StringType }
+                    )
+                ) { entry ->
+                    val venueId = entry.arguments?.getString("venueId").orEmpty()
+                    val timeSlotId = entry.arguments?.getString("timeSlotId").orEmpty()
                     val viewModel: ReservationViewModel = hiltViewModel()
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
+                    LaunchedEffect(venueId, timeSlotId) {
+                        viewModel.loadReservationDraft(venueId = venueId, timeSlotId = timeSlotId)
+                    }
+
                     ReservationConfirmationScreen(
-                        message = state.confirmationMessage,
+                        isDraftLoading = state.isDraftLoading,
+                        draft = state.draft,
+                        isSubmitting = state.isCreatingReservation,
+                        successMessage = state.reservationCreatedMessage,
+                        errorMessage = state.confirmationErrorMessage,
+                        onConfirm = viewModel::confirmReservation,
+                        onBack = { navController.popBackStack() },
                         onMyReservationsClick = { navController.navigate(AppRoute.MyReservations.route) },
+                        onCreateMatchPlaceholder = { navController.navigate(AppRoute.CreateMatch.route) },
                         onHomeClick = {
                             navController.navigate(AppRoute.Home.route) {
                                 popUpTo(AppRoute.Home.route) { inclusive = false }
@@ -300,7 +323,10 @@ fun DaktiNavGraph(startDestination: String) {
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
                     MyReservationsScreen(
-                        reservations = state.reservations,
+                        isLoading = state.isHistoryLoading,
+                        reservations = state.myReservations,
+                        errorMessage = state.historyErrorMessage,
+                        onRefresh = viewModel::loadMyReservations,
                         onBackToHome = {
                             navController.navigate(AppRoute.Home.route) {
                                 popUpTo(AppRoute.Home.route) { inclusive = false }

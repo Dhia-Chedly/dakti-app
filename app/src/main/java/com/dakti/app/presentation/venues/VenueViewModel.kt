@@ -61,6 +61,7 @@ data class VenueUiState(
     val selectedSportFilter: String = ALL_SPORT_FILTER,
     val filteredVenues: List<VenueListItemUi> = emptyList(),
     val selectedVenueDetails: VenueDetailsUi? = null,
+    val selectedSlotId: String? = null,
     val errorMessage: String? = null,
     val detailsErrorMessage: String? = null
 )
@@ -153,7 +154,8 @@ class VenueViewModel @Inject constructor(
                 it.copy(
                     isDetailsLoading = true,
                     detailsErrorMessage = null,
-                    selectedVenueDetails = null
+                    selectedVenueDetails = null,
+                    selectedSlotId = null
                 )
             }
 
@@ -162,6 +164,7 @@ class VenueViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isDetailsLoading = false,
+                            selectedSlotId = null,
                             selectedVenueDetails = result.data.toDetailsUi()
                         )
                     }
@@ -172,6 +175,7 @@ class VenueViewModel @Inject constructor(
                         it.copy(
                             isDetailsLoading = false,
                             selectedVenueDetails = null,
+                            selectedSlotId = null,
                             detailsErrorMessage = result.message
                         )
                     }
@@ -181,6 +185,20 @@ class VenueViewModel @Inject constructor(
                     _uiState.update { it.copy(isDetailsLoading = true) }
                 }
             }
+        }
+    }
+
+    fun selectTimeSlot(slotId: String) {
+        val details = _uiState.value.selectedVenueDetails ?: return
+        val isAvailable = details.timeSlots
+            .firstOrNull { slot -> slot.id == slotId }
+            ?.isAvailable == true
+        if (!isAvailable) {
+            return
+        }
+
+        _uiState.update { state ->
+            state.copy(selectedSlotId = slotId)
         }
     }
 

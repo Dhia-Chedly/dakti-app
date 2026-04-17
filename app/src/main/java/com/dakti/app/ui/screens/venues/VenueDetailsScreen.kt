@@ -37,8 +37,10 @@ import kotlinx.coroutines.launch
 fun VenueDetailsScreen(
     isLoading: Boolean,
     venueDetails: VenueDetailsUi?,
+    selectedSlotId: String?,
     errorMessage: String?,
-    onContinueToReservation: () -> Unit,
+    onSlotSelected: (String) -> Unit,
+    onContinueToReservation: (String) -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -94,6 +96,7 @@ fun VenueDetailsScreen(
             }
 
             else -> {
+                val selectedSlot = venueDetails.timeSlots.firstOrNull { slot -> slot.id == selectedSlotId }
                 val availableSlots = venueDetails.timeSlots.filter { slot -> slot.isAvailable }
                 LazyColumn(
                     modifier = Modifier.padding(innerPadding),
@@ -198,29 +201,65 @@ fun VenueDetailsScreen(
 
                     item {
                         Text(
-                            text = "Available Time Slots",
+                            text = "Select Time Slot",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
 
-                    if (availableSlots.isEmpty()) {
+                    item {
+                        Text(
+                            text = "Unavailable slots are shown for visibility and cannot be selected.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (venueDetails.timeSlots.isEmpty()) {
                         item {
                             VenueEmptyState(
-                                message = "No available slots at the moment.",
+                                message = "No time slots are published for this venue yet.",
                                 onRetry = onRetry
                             )
                         }
                     } else {
-                        items(availableSlots, key = { slot -> slot.id }) { slot ->
-                            TimeSlotItem(slot = slot)
+                        items(venueDetails.timeSlots, key = { slot -> slot.id }) { slot ->
+                            TimeSlotItem(
+                                slot = slot,
+                                isSelected = selectedSlotId == slot.id,
+                                onClick = onSlotSelected
+                            )
+                        }
+                    }
+
+                    if (venueDetails.timeSlots.isNotEmpty() && availableSlots.isEmpty()) {
+                        item {
+                            Text(
+                                text = "All listed slots are currently unavailable.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+
+                    selectedSlot?.let { slot ->
+                        item {
+                            Text(
+                                text = "Selected slot: ${slot.timeLabel}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
 
                     item {
                         Button(
-                            onClick = onContinueToReservation,
-                            enabled = availableSlots.isNotEmpty(),
+                            onClick = {
+                                selectedSlotId?.let { slotId ->
+                                    onContinueToReservation(slotId)
+                                }
+                            },
+                            enabled = selectedSlotId != null && availableSlots.isNotEmpty(),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(text = "Continue to Reservation")

@@ -68,6 +68,9 @@ interface VenueDao {
     @Query("SELECT * FROM time_slots WHERE venueId = :venueId ORDER BY startTime ASC")
     fun observeTimeSlotsByVenue(venueId: String): Flow<List<TimeSlotEntity>>
 
+    @Query("SELECT * FROM time_slots WHERE id = :timeSlotId LIMIT 1")
+    suspend fun getTimeSlotById(timeSlotId: String): TimeSlotEntity?
+
     @Query("SELECT * FROM time_slots WHERE venueId = :venueId AND isAvailable = 1 ORDER BY startTime ASC LIMIT 1")
     suspend fun getFirstAvailableTimeSlot(venueId: String): TimeSlotEntity?
 

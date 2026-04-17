@@ -19,7 +19,10 @@ sealed class AppRoute(val route: String) {
         fun create(venueId: String): String = "venue_details/$venueId"
     }
 
-    data object ReservationConfirmation : AppRoute("reservation_confirmation")
+    data object ReservationConfirmation : AppRoute("reservation_confirmation/{venueId}/{timeSlotId}") {
+        fun create(venueId: String, timeSlotId: String): String =
+            "reservation_confirmation/$venueId/$timeSlotId"
+    }
     data object MyReservations : AppRoute("my_reservations")
 
     data object CreateMatch : AppRoute("create_match")

@@ -1,6 +1,7 @@
 package com.dakti.app.ui.screens.venues
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -93,15 +94,26 @@ fun VenueCard(
 }
 
 @Composable
-fun TimeSlotItem(slot: VenueTimeSlotUi) {
+fun TimeSlotItem(
+    slot: VenueTimeSlotUi,
+    isSelected: Boolean,
+    onClick: (String) -> Unit
+) {
+    val isAvailable = slot.isAvailable
+    val containerColor = when {
+        !isAvailable -> MaterialTheme.colorScheme.surfaceVariant
+        isSelected -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceContainerLow
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = isAvailable) {
+                onClick(slot.id)
+            },
         colors = CardDefaults.cardColors(
-            containerColor = if (slot.isAvailable) {
-                MaterialTheme.colorScheme.surfaceContainerLow
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            }
+            containerColor = containerColor
         )
     ) {
         Column(
@@ -117,11 +129,22 @@ fun TimeSlotItem(slot: VenueTimeSlotUi) {
                 text = if (slot.isAvailable) "Available" else "Unavailable",
                 style = MaterialTheme.typography.bodySmall,
                 color = if (slot.isAvailable) {
-                    MaterialTheme.colorScheme.primary
+                    if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    }
                 } else {
                     MaterialTheme.colorScheme.error
                 }
             )
+            if (isSelected) {
+                Text(
+                    text = "Selected",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
             slot.capacityLabel?.let { capacity ->
                 Text(
                     text = capacity,
