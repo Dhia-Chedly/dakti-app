@@ -1,153 +1,193 @@
-﻿@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 package com.dakti.app.ui.screens.assistant
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AssistChip
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.dakti.app.presentation.assistant.AssistantMessageUi
-import com.dakti.app.ui.components.SectionHeader
+import com.dakti.app.presentation.assistant.AssistantQuickActionUi
+import com.dakti.app.presentation.assistant.AssistantUiState
 
 @Composable
 fun AssistantScreen(
-    isLoading: Boolean,
-    suggestedPrompts: List<String>,
-    messages: List<AssistantMessageUi>,
-    onAskSuggestion: (String) -> Unit,
-    onGoToInvitations: () -> Unit
+    uiState: AssistantUiState,
+    onInputChanged: (String) -> Unit,
+    onSendMessage: () -> Unit,
+    onPromptSelected: (String) -> Unit,
+    onQuickActionSelected: (AssistantQuickActionUi) -> Unit,
+    onRetry: () -> Unit,
+    onDismissError: () -> Unit
 ) {
-    val fallbackPrompt = "Suggest a balanced football match format for 10 players"
-
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(title = { Text(text = "Assistant") })
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier.padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
-            item {
-                SectionHeader(
-                    title = "Dakti Assistant",
-                    subtitle = "Use quick prompts to generate match planning suggestions."
-                )
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    Text(
+                        text = "Dakti AI Assistant",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+
+                item {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(uiState.quickActions, key = { action -> action.id }) { action ->
+                            AssistantQuickActionChip(
+                                action = action,
+                                onClick = onQuickActionSelected
+                            )
+                        }
+                    }
+                }
+
+                if (uiState.showWelcomeState) {
+                    item {
+                        AssistantEmptyState()
+                    }
+
+                    if (uiState.suggestedPrompts.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Try one of these prompts",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
+                        items(uiState.suggestedPrompts, key = { prompt -> prompt }) { prompt ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                )
+                            ) {
+                                TextButton(
+                                    onClick = { onPromptSelected(prompt) },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = prompt,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                items(uiState.messages, key = { message -> message.id }) { message ->
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ChatMessageBubble(message = message)
+                        if (message.suggestions.isNotEmpty()) {
+                            message.suggestions.forEach { suggestion ->
+                                AssistantSuggestionCard(suggestion = suggestion)
+                            }
+                        }
+                    }
+                }
+
+                if (uiState.isLoading) {
+                    item {
+                        AssistantLoadingMessage()
+                    }
+                }
             }
 
-            item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+            uiState.errorMessage?.takeIf { message -> message.isNotBlank() }?.let { error ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(
-                            text = "Quick prompts",
-                            style = MaterialTheme.typography.titleSmall
+                            text = error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
                         )
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            suggestedPrompts.take(2).forEach { prompt ->
-                                AssistChip(
-                                    onClick = { onAskSuggestion(prompt) },
-                                    label = {
-                                        val label = if (prompt.length > 22) {
-                                            prompt.take(22) + "..."
-                                        } else {
-                                            prompt
-                                        }
-                                        Text(label)
-                                    }
-                                )
+                            Button(onClick = onRetry, modifier = Modifier.weight(1f)) {
+                                Text(text = "Retry")
+                            }
+                            TextButton(onClick = onDismissError, modifier = Modifier.weight(1f)) {
+                                Text(text = "Dismiss")
                             }
                         }
                     }
                 }
             }
 
-            item {
-                Text(
-                    text = "Conversation",
-                    style = MaterialTheme.typography.titleSmall
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = uiState.inputText,
+                    onValueChange = onInputChanged,
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text(text = "Ask assistant...") },
+                    maxLines = 4
                 )
-            }
-
-            items(messages.takeLast(6)) { message ->
-                MessageBubble(message = message)
-            }
-
-            item {
-                Button(
-                    onClick = {
-                        onAskSuggestion(
-                            suggestedPrompts.firstOrNull() ?: fallbackPrompt
-                        )
-                    },
-                    enabled = !isLoading,
-                    modifier = Modifier.fillMaxWidth()
+                FilledIconButton(
+                    onClick = onSendMessage,
+                    enabled = uiState.canSend
                 ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.padding(2.dp), strokeWidth = 2.dp)
-                    } else {
-                        Text(text = "Generate New Suggestion")
-                    }
-                }
-            }
-
-            item {
-                TextButton(
-                    onClick = onGoToInvitations,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = "Open Invitations")
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Send"
+                    )
                 }
             }
         }
     }
 }
-
-@Composable
-private fun MessageBubble(message: AssistantMessageUi) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (message.isFromUser) Arrangement.End else Arrangement.Start
-    ) {
-        Text(
-            text = message.text,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier
-                .widthIn(max = 280.dp)
-                .clip(MaterialTheme.shapes.medium)
-                .background(
-                    if (message.isFromUser) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHigh
-                    }
-                )
-                .padding(12.dp)
-        )
-    }
-}
-

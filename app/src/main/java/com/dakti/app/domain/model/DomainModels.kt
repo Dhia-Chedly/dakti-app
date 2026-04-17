@@ -47,7 +47,15 @@ enum class AISuggestionType {
     PLAYER_ALLOCATION,
     SCHEDULE,
     VENUE_RECOMMENDATION,
+    INVITATION_MESSAGE,
+    REMINDER_MESSAGE,
+    RESCHEDULE_PLAN,
     GENERAL
+}
+
+enum class AssistantMessageRole {
+    USER,
+    ASSISTANT
 }
 
 data class User(
@@ -260,6 +268,34 @@ data class AISuggestion(
     val suggestionText: String,
     val confidenceScore: Double?,
     val createdAt: Instant
+)
+
+data class AssistantConversationMessage(
+    val id: String,
+    val role: AssistantMessageRole,
+    val text: String,
+    val createdAt: Instant
+)
+
+data class AssistantSuggestionItem(
+    val id: String,
+    val type: AISuggestionType,
+    val title: String,
+    val description: String?
+)
+
+data class AssistantQuickAction(
+    val id: String,
+    val title: String,
+    val prompt: String
+)
+
+data class AssistantReply(
+    val text: String,
+    val suggestions: List<AssistantSuggestionItem>,
+    val quickActions: List<AssistantQuickAction>,
+    val providerLabel: String,
+    val usedFallback: Boolean
 )
 
 data class UserWithProfiles(

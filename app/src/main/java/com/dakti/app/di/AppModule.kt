@@ -1,7 +1,7 @@
 package com.dakti.app.di
 
 import com.dakti.app.ai.service.AiAssistantService
-import com.dakti.app.ai.service.PlaceholderAiAssistantService
+import com.dakti.app.ai.service.DemoAiAssistantService
 import com.dakti.app.integration.IntegrationManager
 import com.dakti.app.integration.calendar.CalendarIntegration
 import com.dakti.app.integration.dialer.DialerIntegration
@@ -20,7 +20,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAiAssistantService(): AiAssistantService = PlaceholderAiAssistantService()
+    fun provideAiAssistantService(): AiAssistantService = DemoAiAssistantService()
 
     @Provides
     @Singleton

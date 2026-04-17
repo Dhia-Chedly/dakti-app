@@ -232,11 +232,13 @@ fun DaktiNavGraph(startDestination: String) {
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
                     AssistantScreen(
-                        isLoading = state.isLoading,
-                        suggestedPrompts = state.suggestedPrompts,
-                        messages = state.messages,
-                        onAskSuggestion = { prompt -> viewModel.askSuggestion(prompt) },
-                        onGoToInvitations = { navController.navigate(AppRoute.Invitations.route) }
+                        uiState = state,
+                        onInputChanged = viewModel::onInputChanged,
+                        onSendMessage = viewModel::sendCurrentMessage,
+                        onPromptSelected = viewModel::sendSuggestedPrompt,
+                        onQuickActionSelected = viewModel::sendQuickAction,
+                        onRetry = viewModel::retryLastFailedMessage,
+                        onDismissError = viewModel::clearError
                     )
                 }
 
