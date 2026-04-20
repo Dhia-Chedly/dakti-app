@@ -11,12 +11,17 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.matches.MatchDetailsUi
+import kotlinx.coroutines.launch
 
 @Composable
 fun MatchDetailsScreen(
@@ -25,9 +30,16 @@ fun MatchDetailsScreen(
     errorMessage: String?,
     onBack: () -> Unit,
     onInvitePlayers: () -> Unit,
-    onSendReminder: () -> Unit,
-    onAddToCalendar: () -> Unit
+    onSendInvitationViaWhatsApp: () -> String?,
+    onSendReminderViaWhatsApp: () -> String?,
+    onSendInvitationViaEmail: () -> String?,
+    onSendReminderViaEmail: () -> String?,
+    onOpenInMaps: () -> String?,
+    onAddToCalendar: () -> String?
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -38,7 +50,8 @@ fun MatchDetailsScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier.padding(innerPadding),
@@ -78,16 +91,83 @@ fun MatchDetailsScreen(
 
                 item {
                     OutlinedButton(
-                        onClick = onSendReminder,
+                        onClick = {
+                            val message = onSendInvitationViaWhatsApp()
+                            message?.let { result ->
+                                coroutineScope.launch { snackbarHostState.showSnackbar(result) }
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "Send Reminder")
+                        Text(text = "Send Invitation (WhatsApp)")
                     }
                 }
 
                 item {
                     OutlinedButton(
-                        onClick = onAddToCalendar,
+                        onClick = {
+                            val message = onSendReminderViaWhatsApp()
+                            message?.let { result ->
+                                coroutineScope.launch { snackbarHostState.showSnackbar(result) }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Send Reminder (WhatsApp)")
+                    }
+                }
+
+                item {
+                    OutlinedButton(
+                        onClick = {
+                            val message = onSendInvitationViaEmail()
+                            message?.let { result ->
+                                coroutineScope.launch { snackbarHostState.showSnackbar(result) }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Send Invitation (Email)")
+                    }
+                }
+
+                item {
+                    OutlinedButton(
+                        onClick = {
+                            val message = onSendReminderViaEmail()
+                            message?.let { result ->
+                                coroutineScope.launch { snackbarHostState.showSnackbar(result) }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Send Reminder (Email)")
+                    }
+                }
+
+                item {
+                    OutlinedButton(
+                        onClick = {
+                            val message = onOpenInMaps()
+                            message?.let { result ->
+                                coroutineScope.launch { snackbarHostState.showSnackbar(result) }
+                            }
+                        },
+                        enabled = details.venueAddress.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Open in Maps")
+                    }
+                }
+
+                item {
+                    OutlinedButton(
+                        onClick = {
+                            val message = onAddToCalendar()
+                            message?.let { result ->
+                                coroutineScope.launch { snackbarHostState.showSnackbar(result) }
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(text = "Add to Calendar")

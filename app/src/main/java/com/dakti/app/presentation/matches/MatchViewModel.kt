@@ -12,8 +12,13 @@ import com.dakti.app.domain.usecase.GetMatchDetailsUseCase
 import com.dakti.app.domain.usecase.GetMatchReservationContextsUseCase
 import com.dakti.app.domain.usecase.GetMyMatchesUseCase
 import com.dakti.app.domain.usecase.GetVenuesUseCase
+import com.dakti.app.integration.CalendarEventPayload
+import com.dakti.app.integration.EmailPayload
+import com.dakti.app.integration.ShareMessagePayload
+import com.dakti.app.integration.VenueLocationPayload
 import com.dakti.app.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -64,6 +69,7 @@ data class MatchDetailsUi(
     val sportType: String,
     val venueName: String,
     val venueAddress: String,
+    val scheduledStartTime: Instant,
     val scheduledLabel: String,
     val status: MatchStatus,
     val statusLabel: String,
@@ -380,6 +386,74 @@ class MatchViewModel @Inject constructor(
         }
     }
 
+    fun buildSelectedMatchVenueLocationPayload(): VenueLocationPayload? {
+        val details = _uiState.value.selectedMatchDetails ?: return null
+        if (details.venueAddress.isBlank()) {
+            return null
+        }
+        return VenueLocationPayload(
+            venueName = details.venueName,
+            address = details.venueAddress
+        )
+    }
+
+    fun buildSelectedMatchCalendarPayload(): CalendarEventPayload? {
+        val details = _uiState.value.selectedMatchDetails ?: return null
+        val start = details.scheduledStartTime
+        val end = start.plus(Duration.ofHours(DEFAULT_CALENDAR_DURATION_HOURS))
+        val description = buildString {
+            append("Sport: ${details.sportType}\n")
+            append("Required players: ${details.requiredPlayers}\n")
+            details.description?.takeIf { value -> value.isNotBlank() }?.let { notes ->
+                append("Notes: $notes")
+            }
+        }
+
+        return CalendarEventPayload(
+            title = details.title,
+            description = description,
+            location = details.venueAddress,
+            startTime = start,
+            endTime = end
+        )
+    }
+
+    fun buildInvitationSharePayloadForSelectedMatch(): ShareMessagePayload? {
+        val details = _uiState.value.selectedMatchDetails ?: return null
+        val message = buildString {
+            append("Hi team, you are invited to ${details.title} ")
+            append("(${details.sportType}) at ${details.venueName} ")
+            append("on ${details.scheduledLabel}. ")
+            append("Please reply ACCEPT or DECLINE.")
+        }
+        return ShareMessagePayload(text = message)
+    }
+
+    fun buildReminderSharePayloadForSelectedMatch(): ShareMessagePayload? {
+        val details = _uiState.value.selectedMatchDetails ?: return null
+        val message = buildString {
+            append("Reminder: ${details.title} at ${details.venueName}, ${details.scheduledLabel}. ")
+            append("Please arrive 20 minutes early and confirm attendance.")
+        }
+        return ShareMessagePayload(text = message)
+    }
+
+    fun buildInvitationEmailPayloadForSelectedMatch(): EmailPayload? {
+        val details = _uiState.value.selectedMatchDetails ?: return null
+        return EmailPayload(
+            subject = "Invitation: ${details.title}",
+            body = buildInvitationSharePayloadForSelectedMatch()?.text.orEmpty()
+        )
+    }
+
+    fun buildReminderEmailPayloadForSelectedMatch(): EmailPayload? {
+        val details = _uiState.value.selectedMatchDetails ?: return null
+        return EmailPayload(
+            subject = "Reminder: ${details.title}",
+            body = buildReminderSharePayloadForSelectedMatch()?.text.orEmpty()
+        )
+    }
+
     private fun loadReservationContexts() {
         viewModelScope.launch {
             when (val result = getMatchReservationContextsUseCase()) {
@@ -487,6 +561,7 @@ class MatchViewModel @Inject constructor(
             sportType = match.sportType,
             venueName = venueName,
             venueAddress = venueAddress,
+            scheduledStartTime = match.scheduledStartTime,
             scheduledLabel = formatDisplayDate(match.scheduledStartTime),
             status = match.status,
             statusLabel = match.status.toDisplayLabel(),
@@ -535,6 +610,7 @@ class MatchViewModel @Inject constructor(
         instant.atZone(ZoneId.systemDefault()).format(displayFormatter)
 
     companion object {
+        private const val DEFAULT_CALENDAR_DURATION_HOURS: Long = 2
         private val createInputFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
         private val displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, d MMM yyyy HH:mm")
     }

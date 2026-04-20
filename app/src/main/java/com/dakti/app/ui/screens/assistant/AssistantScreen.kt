@@ -22,14 +22,22 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import com.dakti.app.presentation.assistant.AssistantGeneratedMessageUi
 import com.dakti.app.presentation.assistant.AssistantQuickActionUi
 import com.dakti.app.presentation.assistant.AssistantUiState
+import kotlinx.coroutines.launch
 
 @Composable
 fun AssistantScreen(
@@ -41,14 +49,21 @@ fun AssistantScreen(
     onUseVenueSuggestion: (messageId: String, suggestionId: String) -> Unit,
     onConfirmAction: () -> Unit,
     onCancelAction: () -> Unit,
+    onSendGeneratedViaWhatsApp: (AssistantGeneratedMessageUi) -> String?,
+    onSendGeneratedViaEmail: (AssistantGeneratedMessageUi) -> String?,
     onRetry: () -> Unit,
     onDismissError: () -> Unit,
     onDismissActionResult: () -> Unit
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    val clipboardManager = LocalClipboardManager.current
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(title = { Text(text = "Assistant") })
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -139,7 +154,31 @@ fun AssistantScreen(
                         }
 
                         message.generatedMessage?.let { generatedMessage ->
-                            AssistantGeneratedMessageCard(generated = generatedMessage)
+                            AssistantGeneratedMessageCard(
+                                generated = generatedMessage,
+                                onCopy = {
+                                    clipboardManager.setText(AnnotatedString(generatedMessage.content))
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("Message copied.")
+                                    }
+                                },
+                                onSendViaWhatsApp = {
+                                    val resultMessage = onSendGeneratedViaWhatsApp(generatedMessage)
+                                    resultMessage?.let { message ->
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar(message)
+                                        }
+                                    }
+                                },
+                                onSendViaEmail = {
+                                    val resultMessage = onSendGeneratedViaEmail(generatedMessage)
+                                    resultMessage?.let { message ->
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar(message)
+                                        }
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -252,4 +291,3 @@ fun AssistantScreen(
         }
     }
 }
-

@@ -13,6 +13,8 @@ import com.dakti.app.domain.usecase.ExecuteAssistantActionUseCase
 import com.dakti.app.domain.usecase.GetAssistantQuickActionsUseCase
 import com.dakti.app.domain.usecase.GetAssistantSuggestedPromptsUseCase
 import com.dakti.app.domain.usecase.InterpretAssistantRequestUseCase
+import com.dakti.app.integration.EmailPayload
+import com.dakti.app.integration.ShareMessagePayload
 import com.dakti.app.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
@@ -177,6 +179,33 @@ class AssistantViewModel @Inject constructor(
                 actionResultMessage = "Assistant action canceled."
             )
         }
+    }
+
+    fun buildSharePayload(
+        generatedMessage: AssistantGeneratedMessageUi
+    ): ShareMessagePayload? {
+        val content = generatedMessage.content.trim()
+        if (content.isBlank()) {
+            return null
+        }
+        return ShareMessagePayload(text = content)
+    }
+
+    fun buildEmailPayload(
+        generatedMessage: AssistantGeneratedMessageUi
+    ): EmailPayload? {
+        val content = generatedMessage.content.trim()
+        if (content.isBlank()) {
+            return null
+        }
+        val subject = when (generatedMessage.kind) {
+            AssistantGeneratedMessageKind.INVITATION -> "Dakti Match Invitation Draft"
+            AssistantGeneratedMessageKind.REMINDER -> "Dakti Match Reminder Draft"
+        }
+        return EmailPayload(
+            subject = subject,
+            body = content
+        )
     }
 
     fun useVenueSuggestion(
@@ -483,4 +512,3 @@ class AssistantViewModel @Inject constructor(
         private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
 }
-

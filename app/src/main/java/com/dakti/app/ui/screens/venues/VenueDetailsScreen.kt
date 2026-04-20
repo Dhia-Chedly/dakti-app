@@ -41,6 +41,8 @@ fun VenueDetailsScreen(
     errorMessage: String?,
     onSlotSelected: (String) -> Unit,
     onContinueToReservation: (String) -> Unit,
+    onOpenInMaps: () -> String?,
+    onCallVenue: () -> String?,
     onRetry: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -98,6 +100,9 @@ fun VenueDetailsScreen(
             else -> {
                 val selectedSlot = venueDetails.timeSlots.firstOrNull { slot -> slot.id == selectedSlotId }
                 val availableSlots = venueDetails.timeSlots.filter { slot -> slot.isAvailable }
+                val canOpenMaps = venueDetails.address.isNotBlank() ||
+                    (venueDetails.latitude != null && venueDetails.longitude != null)
+                val canCallVenue = !venueDetails.contactPhone.isNullOrBlank()
                 LazyColumn(
                     modifier = Modifier.padding(innerPadding),
                     contentPadding = PaddingValues(16.dp),
@@ -170,10 +175,14 @@ fun VenueDetailsScreen(
                         ) {
                             OutlinedButton(
                                 onClick = {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Maps integration will be enabled in a later phase.")
+                                    val message = onOpenInMaps()
+                                    message?.let { result ->
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar(result)
+                                        }
                                     }
                                 },
+                                enabled = canOpenMaps,
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(
@@ -184,10 +193,14 @@ fun VenueDetailsScreen(
                             }
                             OutlinedButton(
                                 onClick = {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Call integration will be enabled in a later phase.")
+                                    val message = onCallVenue()
+                                    message?.let { result ->
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar(result)
+                                        }
                                     }
                                 },
+                                enabled = canCallVenue,
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(

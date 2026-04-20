@@ -174,7 +174,12 @@ fun AssistantVenueSuggestionCard(
 }
 
 @Composable
-fun AssistantGeneratedMessageCard(generated: AssistantGeneratedMessageUi) {
+fun AssistantGeneratedMessageCard(
+    generated: AssistantGeneratedMessageUi,
+    onCopy: () -> Unit,
+    onSendViaWhatsApp: () -> Unit,
+    onSendViaEmail: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
@@ -210,6 +215,29 @@ fun AssistantGeneratedMessageCard(generated: AssistantGeneratedMessageUi) {
                         text = "- $variant",
                         style = MaterialTheme.typography.bodySmall
                     )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onCopy,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = "Copy")
+                }
+                OutlinedButton(
+                    onClick = onSendViaWhatsApp,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = "WhatsApp")
+                }
+                OutlinedButton(
+                    onClick = onSendViaEmail,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = "Email")
                 }
             }
         }
@@ -303,4 +331,3 @@ fun AssistantLoadingMessage() {
         }
     }
 }
-

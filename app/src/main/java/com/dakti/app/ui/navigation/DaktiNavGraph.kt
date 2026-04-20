@@ -11,6 +11,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -30,6 +31,7 @@ import com.dakti.app.presentation.auth.AuthStatus
 import com.dakti.app.presentation.auth.AuthViewModel
 import com.dakti.app.presentation.home.HomeViewModel
 import com.dakti.app.presentation.invitations.InvitationViewModel
+import com.dakti.app.presentation.integration.ExternalActionViewModel
 import com.dakti.app.presentation.matches.MatchViewModel
 import com.dakti.app.presentation.profile.ProfileViewModel
 import com.dakti.app.presentation.reservations.ReservationViewModel
@@ -229,6 +231,8 @@ fun DaktiNavGraph(startDestination: String) {
 
                 composable(AppRoute.Assistant.route) {
                     val viewModel: AssistantViewModel = hiltViewModel()
+                    val externalActions: ExternalActionViewModel = hiltViewModel()
+                    val context = LocalContext.current
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
                     AssistantScreen(
@@ -240,6 +244,22 @@ fun DaktiNavGraph(startDestination: String) {
                         onUseVenueSuggestion = viewModel::useVenueSuggestion,
                         onConfirmAction = viewModel::confirmPendingAction,
                         onCancelAction = viewModel::cancelPendingAction,
+                        onSendGeneratedViaWhatsApp = { generated ->
+                            val payload = viewModel.buildSharePayload(generated)
+                            if (payload == null) {
+                                "Generated text is empty."
+                            } else {
+                                externalActions.launchWhatsApp(context, payload)
+                            }
+                        },
+                        onSendGeneratedViaEmail = { generated ->
+                            val payload = viewModel.buildEmailPayload(generated)
+                            if (payload == null) {
+                                "Generated text is empty."
+                            } else {
+                                externalActions.launchEmail(context, payload)
+                            }
+                        },
                         onRetry = viewModel::retryLastFailedMessage,
                         onDismissError = viewModel::clearError,
                         onDismissActionResult = viewModel::clearActionResultMessage
@@ -277,6 +297,8 @@ fun DaktiNavGraph(startDestination: String) {
                 ) { entry ->
                     val venueId = entry.arguments?.getString("venueId").orEmpty()
                     val venueViewModel: VenueViewModel = hiltViewModel()
+                    val externalActions: ExternalActionViewModel = hiltViewModel()
+                    val context = LocalContext.current
                     val state by venueViewModel.uiState.collectAsStateWithLifecycle()
 
                     LaunchedEffect(venueId) {
@@ -291,6 +313,22 @@ fun DaktiNavGraph(startDestination: String) {
                         onSlotSelected = venueViewModel::selectTimeSlot,
                         onContinueToReservation = { slotId ->
                             navController.navigate(AppRoute.ReservationConfirmation.create(venueId, slotId))
+                        },
+                        onOpenInMaps = {
+                            val payload = venueViewModel.buildSelectedVenueLocationPayload()
+                            if (payload == null) {
+                                "Venue location is unavailable."
+                            } else {
+                                externalActions.launchMaps(context, payload)
+                            }
+                        },
+                        onCallVenue = {
+                            val payload = venueViewModel.buildSelectedVenueDialerPayload()
+                            if (payload == null) {
+                                "Venue phone number is unavailable."
+                            } else {
+                                externalActions.launchDialer(context, payload)
+                            }
                         },
                         onRetry = { venueViewModel.loadVenueDetails(venueId) },
                         onBack = { navController.popBackStack() }
@@ -414,6 +452,8 @@ fun DaktiNavGraph(startDestination: String) {
                 ) { entry ->
                     val matchId = entry.arguments?.getString("matchId").orEmpty()
                     val viewModel: MatchViewModel = hiltViewModel()
+                    val externalActions: ExternalActionViewModel = hiltViewModel()
+                    val context = LocalContext.current
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
                     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -439,8 +479,54 @@ fun DaktiNavGraph(startDestination: String) {
                         errorMessage = state.detailsErrorMessage,
                         onBack = { navController.popBackStack() },
                         onInvitePlayers = { navController.navigate(AppRoute.InvitePlayers.create(matchId)) },
-                        onSendReminder = { },
-                        onAddToCalendar = { }
+                        onSendInvitationViaWhatsApp = {
+                            val payload = viewModel.buildInvitationSharePayloadForSelectedMatch()
+                            if (payload == null) {
+                                "Match details are unavailable."
+                            } else {
+                                externalActions.launchWhatsApp(context, payload)
+                            }
+                        },
+                        onSendReminderViaWhatsApp = {
+                            val payload = viewModel.buildReminderSharePayloadForSelectedMatch()
+                            if (payload == null) {
+                                "Match details are unavailable."
+                            } else {
+                                externalActions.launchWhatsApp(context, payload)
+                            }
+                        },
+                        onSendInvitationViaEmail = {
+                            val payload = viewModel.buildInvitationEmailPayloadForSelectedMatch()
+                            if (payload == null) {
+                                "Match details are unavailable."
+                            } else {
+                                externalActions.launchEmail(context, payload)
+                            }
+                        },
+                        onSendReminderViaEmail = {
+                            val payload = viewModel.buildReminderEmailPayloadForSelectedMatch()
+                            if (payload == null) {
+                                "Match details are unavailable."
+                            } else {
+                                externalActions.launchEmail(context, payload)
+                            }
+                        },
+                        onOpenInMaps = {
+                            val payload = viewModel.buildSelectedMatchVenueLocationPayload()
+                            if (payload == null) {
+                                "Venue location is unavailable."
+                            } else {
+                                externalActions.launchMaps(context, payload)
+                            }
+                        },
+                        onAddToCalendar = {
+                            val payload = viewModel.buildSelectedMatchCalendarPayload()
+                            if (payload == null) {
+                                "Match schedule is unavailable."
+                            } else {
+                                externalActions.launchCalendar(context, payload)
+                            }
+                        }
                     )
                 }
 

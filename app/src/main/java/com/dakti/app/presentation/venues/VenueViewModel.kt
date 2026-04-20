@@ -7,6 +7,8 @@ import com.dakti.app.domain.model.VenueWithTimeSlots
 import com.dakti.app.domain.usecase.GetVenueDetailsUseCase
 import com.dakti.app.domain.usecase.GetVenueSportTypesUseCase
 import com.dakti.app.domain.usecase.SearchVenuesUseCase
+import com.dakti.app.integration.DialerPayload
+import com.dakti.app.integration.VenueLocationPayload
 import com.dakti.app.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.ZoneId
@@ -46,6 +48,8 @@ data class VenueDetailsUi(
     val locationLabel: String,
     val address: String,
     val contactPhone: String?,
+    val latitude: Double?,
+    val longitude: Double?,
     val description: String,
     val imageUrl: String?,
     val priceLabel: String,
@@ -202,6 +206,30 @@ class VenueViewModel @Inject constructor(
         }
     }
 
+    fun buildSelectedVenueLocationPayload(): VenueLocationPayload? {
+        val details = _uiState.value.selectedVenueDetails ?: return null
+        val hasAddress = details.address.isNotBlank()
+        val hasCoordinates = details.latitude != null && details.longitude != null
+        if (!hasAddress && !hasCoordinates) {
+            return null
+        }
+
+        return VenueLocationPayload(
+            venueName = details.name,
+            address = details.address,
+            latitude = details.latitude,
+            longitude = details.longitude
+        )
+    }
+
+    fun buildSelectedVenueDialerPayload(): DialerPayload? {
+        val number = _uiState.value.selectedVenueDetails
+            ?.contactPhone
+            ?.takeIf { value -> value.isNotBlank() }
+            ?: return null
+        return DialerPayload(phoneNumber = number)
+    }
+
     private fun VenueWithTimeSlots.toListItemUi(): VenueListItemUi {
         val availableSlots = slots.filter { slot -> slot.isAvailable }
         val nextAvailable = availableSlots.minByOrNull { slot -> slot.startTime }
@@ -226,6 +254,8 @@ class VenueViewModel @Inject constructor(
             locationLabel = venue.locationLabel(),
             address = venue.address,
             contactPhone = venue.contactPhone,
+            latitude = venue.latitude,
+            longitude = venue.longitude,
             description = venue.description ?: "No venue description provided yet.",
             imageUrl = venue.imageUrl,
             priceLabel = "${venue.currency} ${venue.pricePerHour.toInt()} / hour",
