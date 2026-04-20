@@ -12,6 +12,7 @@ import com.dakti.app.domain.usecase.GetMatchDetailsUseCase
 import com.dakti.app.domain.usecase.GetMatchReservationContextsUseCase
 import com.dakti.app.domain.usecase.GetMyMatchesUseCase
 import com.dakti.app.domain.usecase.GetVenuesUseCase
+import com.dakti.app.domain.usecase.ScheduleMatchReminderUseCase
 import com.dakti.app.integration.CalendarEventPayload
 import com.dakti.app.integration.EmailPayload
 import com.dakti.app.integration.ShareMessagePayload
@@ -129,7 +130,8 @@ class MatchViewModel @Inject constructor(
     private val createMatchUseCase: CreateMatchUseCase,
     private val getMatchDetailsUseCase: GetMatchDetailsUseCase,
     private val getMatchReservationContextsUseCase: GetMatchReservationContextsUseCase,
-    private val getVenuesUseCase: GetVenuesUseCase
+    private val getVenuesUseCase: GetVenuesUseCase,
+    private val scheduleMatchReminderUseCase: ScheduleMatchReminderUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MatchUiState())
@@ -278,11 +280,20 @@ class MatchViewModel @Inject constructor(
 
             when (val result = createMatchUseCase(payload)) {
                 is Resource.Success -> {
+                    val reminderResult = scheduleMatchReminderUseCase(
+                        matchId = result.data.match.id,
+                        scheduledStartTime = result.data.match.scheduledStartTime
+                    )
+                    val reminderHint = if (reminderResult is Resource.Success) {
+                        " Match reminder scheduled."
+                    } else {
+                        " Match reminder could not be scheduled."
+                    }
                     _uiState.update {
                         it.copy(
                             isCreatingMatch = false,
                             latestCreatedMatchId = result.data.match.id,
-                            createSuccessMessage = "Match created successfully.",
+                            createSuccessMessage = "Match created successfully.$reminderHint",
                             createErrorMessage = null
                         )
                     }

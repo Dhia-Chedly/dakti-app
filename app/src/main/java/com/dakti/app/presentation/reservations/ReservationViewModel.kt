@@ -8,6 +8,7 @@ import com.dakti.app.domain.model.ReservationStatus
 import com.dakti.app.domain.usecase.CreateReservationUseCase
 import com.dakti.app.domain.usecase.GetMyReservationsUseCase
 import com.dakti.app.domain.usecase.GetReservationDraftUseCase
+import com.dakti.app.domain.usecase.SendReservationConfirmationNotificationUseCase
 import com.dakti.app.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.ZoneId
@@ -55,7 +56,8 @@ data class ReservationUiState(
 class ReservationViewModel @Inject constructor(
     private val getReservationDraftUseCase: GetReservationDraftUseCase,
     private val createReservationUseCase: CreateReservationUseCase,
-    private val getMyReservationsUseCase: GetMyReservationsUseCase
+    private val getMyReservationsUseCase: GetMyReservationsUseCase,
+    private val sendReservationConfirmationNotificationUseCase: SendReservationConfirmationNotificationUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReservationUiState())
@@ -153,11 +155,17 @@ class ReservationViewModel @Inject constructor(
                 )
             ) {
                 is Resource.Success -> {
+                    val notificationResult = sendReservationConfirmationNotificationUseCase(result.data)
+                    val notificationHint = if (notificationResult is Resource.Error) {
+                        " Notification permission may be disabled."
+                    } else {
+                        ""
+                    }
                     _uiState.update {
                         it.copy(
                             isCreatingReservation = false,
                             draft = draft.copy(isSlotAvailable = false),
-                            reservationCreatedMessage = "Reservation confirmed for ${result.data.venueName}.",
+                            reservationCreatedMessage = "Reservation confirmed for ${result.data.venueName}.$notificationHint",
                             latestCreatedReservationId = result.data.id,
                             confirmationErrorMessage = null
                         )

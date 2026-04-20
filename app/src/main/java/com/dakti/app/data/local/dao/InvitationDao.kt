@@ -32,6 +32,9 @@ interface InvitationDao {
     @Query("SELECT * FROM invitations WHERE matchId = :matchId ORDER BY sentAt DESC")
     fun observeInvitationsByMatch(matchId: String): Flow<List<InvitationEntity>>
 
+    @Query("SELECT COUNT(*) FROM invitations WHERE matchId = :matchId AND status = 'PENDING'")
+    suspend fun countPendingInvitationsForMatch(matchId: String): Int
+
     @Query("SELECT * FROM invitations WHERE matchId = :matchId AND playerId IN (:playerIds)")
     suspend fun getInvitationsByMatchAndPlayers(
         matchId: String,

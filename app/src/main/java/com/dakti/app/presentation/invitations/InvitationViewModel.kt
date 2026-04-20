@@ -10,6 +10,7 @@ import com.dakti.app.domain.usecase.GetMatchInvitationsUseCase
 import com.dakti.app.domain.usecase.GetPlayerInvitationsUseCase
 import com.dakti.app.domain.usecase.InvitePlayersUseCase
 import com.dakti.app.domain.usecase.RespondToInvitationUseCase
+import com.dakti.app.domain.usecase.ScheduleInvitationReminderUseCase
 import com.dakti.app.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
@@ -102,7 +103,8 @@ class InvitationViewModel @Inject constructor(
     private val getInviteCandidatesUseCase: GetInviteCandidatesUseCase,
     private val invitePlayersUseCase: InvitePlayersUseCase,
     private val getMatchInvitationsUseCase: GetMatchInvitationsUseCase,
-    private val getMatchDetailsUseCase: GetMatchDetailsUseCase
+    private val getMatchDetailsUseCase: GetMatchDetailsUseCase,
+    private val scheduleInvitationReminderUseCase: ScheduleInvitationReminderUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(InvitationUiState())
@@ -339,6 +341,14 @@ class InvitationViewModel @Inject constructor(
             ) {
                 is Resource.Success -> {
                     val sentCount = result.data
+                    val reminderStatusMessage = if (sentCount > 0) {
+                        when (scheduleInvitationReminderUseCase(matchId)) {
+                            is Resource.Success -> " Pending-response reminder scheduled."
+                            else -> " Pending-response reminder could not be scheduled."
+                        }
+                    } else {
+                        ""
+                    }
                     _uiState.update { state ->
                         state.copy(
                             invitePlayers = state.invitePlayers.copy(
@@ -353,7 +363,7 @@ class InvitationViewModel @Inject constructor(
                             actionMessage = if (sentCount == 0) {
                                 "No new invitations were created."
                             } else {
-                                "Invitations sent successfully."
+                                "Invitations sent successfully.$reminderStatusMessage"
                             }
                         )
                     }

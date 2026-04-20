@@ -17,6 +17,7 @@ import com.dakti.app.domain.model.Organizer
 import com.dakti.app.domain.model.User
 import com.dakti.app.domain.model.UserRole
 import com.dakti.app.domain.repository.MatchRepository
+import com.dakti.app.domain.repository.NotificationRepository
 import com.dakti.app.util.Resource
 import java.time.Instant
 import java.time.ZoneId
@@ -31,7 +32,8 @@ class MatchRepositoryImpl @Inject constructor(
     private val reservationDao: ReservationDao,
     private val venueDao: VenueDao,
     private val userDao: UserDao,
-    private val sessionLocalDataSource: SessionLocalDataSource
+    private val sessionLocalDataSource: SessionLocalDataSource,
+    private val notificationRepository: NotificationRepository
 ) : MatchRepository {
 
     override suspend fun getMyMatches(): Resource<List<MatchWithContext>> {
@@ -122,6 +124,21 @@ class MatchRepositoryImpl @Inject constructor(
                 updatedAt = Instant.now().toEpochMilli()
             )
         )
+
+        notificationRepository.sendMatchUpdatedNotification(
+            matchId = matchId,
+            updateMessage = "Match status updated to ${status.toDisplayLabel()}."
+        )
+
+        if (status == MatchStatus.CANCELLED || status == MatchStatus.COMPLETED) {
+            notificationRepository.cancelMatchReminder(matchId)
+        } else {
+            notificationRepository.scheduleMatchReminder(
+                matchId = matchId,
+                scheduledStartTime = Instant.ofEpochMilli(match.scheduledStartTime)
+            )
+        }
+
         return Resource.Success(Unit)
     }
 
@@ -220,4 +237,15 @@ class MatchRepositoryImpl @Inject constructor(
         private val slotStartFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, d MMM HH:mm")
         private val slotEndFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
+
+    private fun MatchStatus.toDisplayLabel(): String =
+        when (this) {
+            MatchStatus.ORGANIZING,
+            MatchStatus.DRAFT,
+            MatchStatus.OPEN -> "organizing"
+            MatchStatus.CONFIRMED,
+            MatchStatus.FULL -> "confirmed"
+            MatchStatus.CANCELLED -> "cancelled"
+            MatchStatus.COMPLETED -> "completed"
+        }
 }

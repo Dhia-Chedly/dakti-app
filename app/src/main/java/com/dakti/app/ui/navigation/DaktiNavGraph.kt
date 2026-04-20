@@ -55,13 +55,31 @@ import com.dakti.app.ui.screens.venues.VenueDetailsScreen
 import com.dakti.app.ui.screens.venues.VenueListScreen
 
 @Composable
-fun DaktiNavGraph(startDestination: String) {
+fun DaktiNavGraph(
+    startDestination: String,
+    pendingNotificationRoute: String? = null,
+    onNotificationRouteConsumed: (() -> Unit)? = null
+) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val showBottomBar = currentDestination
         ?.hierarchy
         ?.any { destination -> destination.route in AppRoute.bottomNavRoutes } == true
+
+    LaunchedEffect(pendingNotificationRoute) {
+        val targetRoute = pendingNotificationRoute
+            ?.takeIf { route -> route.isNotBlank() }
+            ?: return@LaunchedEffect
+
+        navController.navigate(AppRoute.MainGraph.route) {
+            launchSingleTop = true
+        }
+        navController.navigate(targetRoute) {
+            launchSingleTop = true
+        }
+        onNotificationRouteConsumed?.invoke()
+    }
 
     Scaffold(
         bottomBar = {
