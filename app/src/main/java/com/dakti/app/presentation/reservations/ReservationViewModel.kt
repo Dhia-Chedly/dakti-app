@@ -122,6 +122,10 @@ class ReservationViewModel @Inject constructor(
     }
 
     fun confirmReservation() {
+        if (_uiState.value.isCreatingReservation) {
+            return
+        }
+
         val draft = _uiState.value.draft
         if (draft == null) {
             _uiState.update {

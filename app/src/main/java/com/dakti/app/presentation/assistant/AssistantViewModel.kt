@@ -236,6 +236,10 @@ class AssistantViewModel @Inject constructor(
     }
 
     fun confirmPendingAction() {
+        if (_uiState.value.isExecutingAction) {
+            return
+        }
+
         val proposal = _uiState.value.pendingActionProposal ?: return
 
         viewModelScope.launch {
@@ -293,6 +297,11 @@ class AssistantViewModel @Inject constructor(
     }
 
     private fun sendMessage(rawInput: String) {
+        val currentState = _uiState.value
+        if (currentState.isLoading || currentState.isExecutingAction) {
+            return
+        }
+
         val normalized = rawInput.trim()
         if (normalized.isBlank()) {
             _uiState.update { state -> state.copy(errorMessage = "Type a message first.") }
@@ -314,6 +323,7 @@ class AssistantViewModel @Inject constructor(
                 errorMessage = null,
                 lastFailedPrompt = null,
                 actionResultMessage = null,
+                pendingActionProposal = null,
                 messages = updatedMessages
             )
         }
@@ -396,7 +406,7 @@ class AssistantViewModel @Inject constructor(
                             pendingActionProposal = if (assistantMessage.actionProposal?.requiresConfirmation == true) {
                                 assistantMessage.actionProposal
                             } else {
-                                state.pendingActionProposal
+                                null
                             }
                         )
                     }

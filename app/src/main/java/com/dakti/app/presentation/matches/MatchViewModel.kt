@@ -241,7 +241,8 @@ class MatchViewModel @Inject constructor(
         _uiState.update { state ->
             val updated = if (reservationId == null) {
                 state.formState.copy(
-                    selectedReservationId = null
+                    selectedReservationId = null,
+                    selectedVenueId = null
                 )
             } else {
                 state.formState.copy(
@@ -264,6 +265,10 @@ class MatchViewModel @Inject constructor(
     }
 
     fun createMatch() {
+        if (_uiState.value.isCreatingMatch) {
+            return
+        }
+
         val state = _uiState.value
         val scheduledStartTime = parseScheduledInput(state.formState.scheduledAtInput)
             ?: run {

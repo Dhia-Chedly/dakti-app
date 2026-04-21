@@ -534,10 +534,6 @@ fun DaktiNavGraph(
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
                     val lifecycleOwner = LocalLifecycleOwner.current
 
-                    LaunchedEffect(matchId) {
-                        viewModel.loadMatchDetails(matchId)
-                    }
-
                     DisposableEffect(lifecycleOwner, matchId) {
                         val observer = LifecycleEventObserver { _, event ->
                             if (event == Lifecycle.Event.ON_RESUME) {

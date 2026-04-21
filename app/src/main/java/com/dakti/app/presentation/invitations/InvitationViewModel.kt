@@ -153,6 +153,10 @@ class InvitationViewModel @Inject constructor(
         invitationId: String,
         accept: Boolean
     ) {
+        if (invitationId in _uiState.value.respondingInvitationIds) {
+            return
+        }
+
         val nextStatus = if (accept) {
             InvitationResponseStatus.ACCEPTED
         } else {
@@ -298,6 +302,10 @@ class InvitationViewModel @Inject constructor(
 
     fun sendInvitations() {
         val inviteState = _uiState.value.invitePlayers
+        if (inviteState.isSending) {
+            return
+        }
+
         val matchId = inviteState.matchId
         if (matchId.isNullOrBlank()) {
             _uiState.update { state ->
