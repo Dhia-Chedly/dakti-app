@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.matches.MatchDetailsUi
 import com.dakti.app.presentation.matches.MatchListItemUi
+import com.dakti.app.presentation.matches.MatchReadinessUi
 
 @Composable
 fun MatchStatusChip(statusLabel: String) {
@@ -168,6 +169,98 @@ fun MatchSummaryCard(details: MatchDetailsUi) {
                     text = description,
                     style = MaterialTheme.typography.bodyMedium
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun MatchReadinessCard(readiness: MatchReadinessUi) {
+    val containerColor = when (readiness.status) {
+        com.dakti.app.domain.model.MatchReadinessStatus.READY -> MaterialTheme.colorScheme.tertiaryContainer
+        com.dakti.app.domain.model.MatchReadinessStatus.AT_RISK -> MaterialTheme.colorScheme.secondaryContainer
+        com.dakti.app.domain.model.MatchReadinessStatus.INSUFFICIENT_PLAYERS -> MaterialTheme.colorScheme.errorContainer
+        com.dakti.app.domain.model.MatchReadinessStatus.NEEDS_ORGANIZER_ACTION -> MaterialTheme.colorScheme.secondaryContainer
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Readiness: ${readiness.statusLabel}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = readiness.summary,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = readiness.reason,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Confirmed ${readiness.confirmedPlayersCount}/${readiness.requiredPlayers}, " +
+                    "Pending ${readiness.pendingPlayersCount}, Declined ${readiness.declinedPlayersCount}, " +
+                    "Remaining ${readiness.remainingSpots}",
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+    }
+}
+
+@Composable
+fun MatchMonitoringActionsCard(readiness: MatchReadinessUi) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Suggested Next Steps",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            readiness.suggestedActions.forEach { action ->
+                Text(
+                    text = "- ${action.title}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                action.description?.takeIf { value -> value.isNotBlank() }?.let { description ->
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if (readiness.reschedulingSuggestions.isNotEmpty()) {
+                Text(
+                    text = "Rescheduling options",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                readiness.reschedulingSuggestions.forEach { suggestion ->
+                    Text(
+                        text = "${suggestion.venueName} - ${suggestion.timeSlotLabel}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = suggestion.reason,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

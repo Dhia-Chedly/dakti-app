@@ -19,6 +19,8 @@ import com.dakti.app.domain.model.AssistantStructuredRequest
 import com.dakti.app.domain.model.AssistantSuggestionItem
 import com.dakti.app.domain.model.AssistantVenueSuggestion
 import com.dakti.app.domain.model.MatchCreatePayload
+import com.dakti.app.domain.model.MatchMonitoringResult
+import com.dakti.app.domain.model.MonitoringAlert
 import com.dakti.app.domain.repository.MatchRepository
 import com.dakti.app.domain.repository.ReservationRepository
 import com.dakti.app.domain.repository.VenueRepository
@@ -37,7 +39,8 @@ class AssistantOrchestrator @Inject constructor(
     private val suggestionEngine: SuggestionEngine,
     private val venueRepository: VenueRepository,
     private val reservationRepository: ReservationRepository,
-    private val matchRepository: MatchRepository
+    private val matchRepository: MatchRepository,
+    private val matchMonitoringCoordinator: MatchMonitoringCoordinator
 ) {
 
     suspend fun interpretRequest(
@@ -102,6 +105,23 @@ class AssistantOrchestrator @Inject constructor(
             AssistantActionType.CREATE_RESERVATION_AND_MATCH -> executeReservationAndMatch(proposal)
         }
     }
+
+    suspend fun evaluateMatchReadiness(
+        matchId: String
+    ): Resource<MatchMonitoringResult> =
+        matchMonitoringCoordinator.evaluateMatchReadiness(matchId)
+
+    suspend fun evaluateMyMatchReadiness(): Resource<List<MatchMonitoringResult>> =
+        matchMonitoringCoordinator.evaluateMyMatchesReadiness()
+
+    suspend fun generateMonitoringReminderMessage(matchId: String): Resource<String> =
+        matchMonitoringCoordinator.generateMonitoringReminderMessage(matchId)
+
+    suspend fun generateMonitoringUpdateMessage(matchId: String): Resource<String> =
+        matchMonitoringCoordinator.generateMonitoringUpdateMessage(matchId)
+
+    suspend fun monitorMatchAndBuildAlert(matchId: String): Resource<MonitoringAlert?> =
+        matchMonitoringCoordinator.monitorMatchAndBuildAlert(matchId)
 
     private suspend fun buildOrganizeMatchReply(
         request: AssistantStructuredRequest

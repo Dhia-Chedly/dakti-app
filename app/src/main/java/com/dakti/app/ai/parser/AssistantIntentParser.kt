@@ -54,11 +54,16 @@ class AssistantIntentParser @Inject constructor() {
         val hasInvitation = lowered.contains("invitation") || lowered.contains("invite message")
         val hasReminder = lowered.contains("reminder") || lowered.contains("remind")
         val hasReschedule = lowered.contains("reschedule") || lowered.contains("postpone") || lowered.contains("move time")
+        val hasReadiness = lowered.contains("readiness") ||
+            lowered.contains("at risk") ||
+            lowered.contains("insufficient players") ||
+            lowered.contains("not enough players") ||
+            lowered.contains("needs attention")
 
         return when {
             hasInvitation -> AssistantIntent.GENERATE_INVITATION_MESSAGE
             hasReminder -> AssistantIntent.GENERATE_REMINDER_MESSAGE
-            hasReschedule -> AssistantIntent.RESCHEDULE_HELP
+            hasReschedule || hasReadiness -> AssistantIntent.RESCHEDULE_HELP
             hasAlternative -> AssistantIntent.SUGGEST_ALTERNATIVE_SLOT
             hasOrganize && hasMatch -> AssistantIntent.ORGANIZE_MATCH
             hasVenue -> AssistantIntent.SUGGEST_VENUE
@@ -183,4 +188,3 @@ class AssistantIntentParser @Inject constructor() {
         private const val DEFAULT_FALLBACK_HOUR: Int = 18
     }
 }
-

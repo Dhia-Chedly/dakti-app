@@ -2,12 +2,16 @@ package com.dakti.app.presentation.matches
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dakti.app.domain.model.MatchMonitoringResult
+import com.dakti.app.domain.model.MatchReadinessStatus
+import com.dakti.app.domain.model.MonitoringSuggestedActionType
 import com.dakti.app.domain.model.MatchCreatePayload
 import com.dakti.app.domain.model.MatchReservationContext
 import com.dakti.app.domain.model.MatchStatus
 import com.dakti.app.domain.model.MatchWithContext
 import com.dakti.app.domain.model.VenueWithTimeSlots
 import com.dakti.app.domain.usecase.CreateMatchUseCase
+import com.dakti.app.domain.usecase.EvaluateMatchReadinessUseCase
 import com.dakti.app.domain.usecase.GetMatchDetailsUseCase
 import com.dakti.app.domain.usecase.GetMatchReservationContextsUseCase
 import com.dakti.app.domain.usecase.GetMyMatchesUseCase
@@ -85,6 +89,38 @@ data class MatchDetailsUi(
     val description: String?
 )
 
+data class MonitoringSuggestedActionUi(
+    val type: MonitoringSuggestedActionType,
+    val title: String,
+    val description: String?
+)
+
+data class ReschedulingSuggestionUi(
+    val suggestionId: String,
+    val venueName: String,
+    val venueAddress: String,
+    val timeSlotLabel: String,
+    val reason: String
+)
+
+data class MatchReadinessUi(
+    val status: MatchReadinessStatus,
+    val statusLabel: String,
+    val reason: String,
+    val summary: String,
+    val requiredPlayers: Int,
+    val confirmedPlayersCount: Int,
+    val pendingPlayersCount: Int,
+    val declinedPlayersCount: Int,
+    val remainingSpots: Int,
+    val minutesUntilMatch: Long,
+    val shouldAlertOrganizer: Boolean,
+    val reminderMessageText: String?,
+    val updateMessageText: String?,
+    val suggestedActions: List<MonitoringSuggestedActionUi>,
+    val reschedulingSuggestions: List<ReschedulingSuggestionUi>
+)
+
 data class MatchCreateFormState(
     val selectedReservationId: String? = null,
     val selectedVenueId: String? = null,
@@ -107,6 +143,9 @@ data class MatchUiState(
     val latestCreatedMatchId: String? = null,
     val isDetailsLoading: Boolean = false,
     val selectedMatchDetails: MatchDetailsUi? = null,
+    val isMonitoringLoading: Boolean = false,
+    val selectedMatchReadiness: MatchReadinessUi? = null,
+    val monitoringErrorMessage: String? = null,
     val detailsErrorMessage: String? = null,
     val errorMessage: String? = null
 ) {
@@ -131,7 +170,8 @@ class MatchViewModel @Inject constructor(
     private val getMatchDetailsUseCase: GetMatchDetailsUseCase,
     private val getMatchReservationContextsUseCase: GetMatchReservationContextsUseCase,
     private val getVenuesUseCase: GetVenuesUseCase,
-    private val scheduleMatchReminderUseCase: ScheduleMatchReminderUseCase
+    private val scheduleMatchReminderUseCase: ScheduleMatchReminderUseCase,
+    private val evaluateMatchReadinessUseCase: EvaluateMatchReadinessUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MatchUiState())
@@ -357,6 +397,9 @@ class MatchViewModel @Inject constructor(
                 it.copy(
                     isDetailsLoading = true,
                     selectedMatchDetails = null,
+                    selectedMatchReadiness = null,
+                    isMonitoringLoading = true,
+                    monitoringErrorMessage = null,
                     detailsErrorMessage = null
                 )
             }
@@ -366,9 +409,11 @@ class MatchViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isDetailsLoading = false,
-                            selectedMatchDetails = result.data.toDetailsUi()
+                            selectedMatchDetails = result.data.toDetailsUi(),
+                            detailsErrorMessage = null
                         )
                     }
+                    evaluateReadiness(matchId)
                 }
 
                 is Resource.Error -> {
@@ -376,6 +421,8 @@ class MatchViewModel @Inject constructor(
                         it.copy(
                             isDetailsLoading = false,
                             selectedMatchDetails = null,
+                            selectedMatchReadiness = null,
+                            isMonitoringLoading = false,
                             detailsErrorMessage = result.message
                         )
                     }
@@ -395,6 +442,10 @@ class MatchViewModel @Inject constructor(
                 createErrorMessage = null
             )
         }
+    }
+
+    fun refreshMatchReadiness(matchId: String) {
+        evaluateReadiness(matchId)
     }
 
     fun buildSelectedMatchVenueLocationPayload(): VenueLocationPayload? {
@@ -449,6 +500,22 @@ class MatchViewModel @Inject constructor(
         return ShareMessagePayload(text = message)
     }
 
+    fun buildMonitoringReminderSharePayloadForSelectedMatch(): ShareMessagePayload? {
+        val text = _uiState.value.selectedMatchReadiness?.reminderMessageText
+            ?.trim()
+            ?.takeIf { value -> value.isNotBlank() }
+            ?: return null
+        return ShareMessagePayload(text = text)
+    }
+
+    fun buildMonitoringUpdateSharePayloadForSelectedMatch(): ShareMessagePayload? {
+        val text = _uiState.value.selectedMatchReadiness?.updateMessageText
+            ?.trim()
+            ?.takeIf { value -> value.isNotBlank() }
+            ?: return null
+        return ShareMessagePayload(text = text)
+    }
+
     fun buildInvitationEmailPayloadForSelectedMatch(): EmailPayload? {
         val details = _uiState.value.selectedMatchDetails ?: return null
         return EmailPayload(
@@ -462,6 +529,24 @@ class MatchViewModel @Inject constructor(
         return EmailPayload(
             subject = "Reminder: ${details.title}",
             body = buildReminderSharePayloadForSelectedMatch()?.text.orEmpty()
+        )
+    }
+
+    fun buildMonitoringReminderEmailPayloadForSelectedMatch(): EmailPayload? {
+        val details = _uiState.value.selectedMatchDetails ?: return null
+        val payload = buildMonitoringReminderSharePayloadForSelectedMatch() ?: return null
+        return EmailPayload(
+            subject = "Reminder: ${details.title}",
+            body = payload.text
+        )
+    }
+
+    fun buildMonitoringUpdateEmailPayloadForSelectedMatch(): EmailPayload? {
+        val details = _uiState.value.selectedMatchDetails ?: return null
+        val payload = buildMonitoringUpdateSharePayloadForSelectedMatch() ?: return null
+        return EmailPayload(
+            subject = "Match Update: ${details.title}",
+            body = payload.text
         )
     }
 
@@ -548,6 +633,43 @@ class MatchViewModel @Inject constructor(
         return localDateTime.atZone(ZoneId.systemDefault()).toInstant()
     }
 
+    private fun evaluateReadiness(matchId: String) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isMonitoringLoading = true,
+                    monitoringErrorMessage = null
+                )
+            }
+
+            when (val result = evaluateMatchReadinessUseCase(matchId)) {
+                is Resource.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isMonitoringLoading = false,
+                            selectedMatchReadiness = result.data.toUi(),
+                            monitoringErrorMessage = null
+                        )
+                    }
+                }
+
+                is Resource.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isMonitoringLoading = false,
+                            selectedMatchReadiness = null,
+                            monitoringErrorMessage = result.message
+                        )
+                    }
+                }
+
+                Resource.Loading -> {
+                    _uiState.update { it.copy(isMonitoringLoading = true) }
+                }
+            }
+        }
+    }
+
     private fun MatchWithContext.toListItemUi(): MatchListItemUi =
         MatchListItemUi(
             id = match.id,
@@ -587,6 +709,39 @@ class MatchViewModel @Inject constructor(
             description = match.description
         )
 
+    private fun MatchMonitoringResult.toUi(): MatchReadinessUi =
+        MatchReadinessUi(
+            status = status,
+            statusLabel = status.toDisplayLabel(),
+            reason = reason,
+            summary = summary,
+            requiredPlayers = requiredPlayers,
+            confirmedPlayersCount = confirmedPlayersCount,
+            pendingPlayersCount = pendingPlayersCount,
+            declinedPlayersCount = declinedPlayersCount,
+            remainingSpots = remainingSpots,
+            minutesUntilMatch = minutesUntilMatch,
+            shouldAlertOrganizer = shouldAlertOrganizer,
+            reminderMessageText = reminderMessageText,
+            updateMessageText = updateMessageText,
+            suggestedActions = suggestedActions.map { action ->
+                MonitoringSuggestedActionUi(
+                    type = action.type,
+                    title = action.title,
+                    description = action.description
+                )
+            },
+            reschedulingSuggestions = reschedulingSuggestions.map { suggestion ->
+                ReschedulingSuggestionUi(
+                    suggestionId = suggestion.id,
+                    venueName = suggestion.venueName,
+                    venueAddress = suggestion.venueAddress,
+                    timeSlotLabel = suggestion.timeSlotLabel,
+                    reason = suggestion.reason
+                )
+            }
+        )
+
     private fun MatchStatus.toDisplayLabel(): String =
         when (this) {
             MatchStatus.ORGANIZING,
@@ -596,6 +751,14 @@ class MatchViewModel @Inject constructor(
             MatchStatus.CONFIRMED -> "Confirmed"
             MatchStatus.CANCELLED -> "Cancelled"
             MatchStatus.COMPLETED -> "Completed"
+        }
+
+    private fun MatchReadinessStatus.toDisplayLabel(): String =
+        when (this) {
+            MatchReadinessStatus.READY -> "Ready"
+            MatchReadinessStatus.AT_RISK -> "At Risk"
+            MatchReadinessStatus.INSUFFICIENT_PLAYERS -> "Insufficient Players"
+            MatchReadinessStatus.NEEDS_ORGANIZER_ACTION -> "Needs Action"
         }
 
     private fun MatchReservationContext.toUi(): MatchReservationContextUi =

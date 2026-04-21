@@ -82,6 +82,14 @@ class MatchRepositoryImpl @Inject constructor(
         )
 
         matchDao.upsertMatch(match.toEntity())
+        notificationRepository.scheduleMatchReminder(
+            matchId = match.id,
+            scheduledStartTime = match.scheduledStartTime
+        )
+        notificationRepository.scheduleMatchReadinessMonitoring(
+            matchId = match.id,
+            scheduledStartTime = match.scheduledStartTime
+        )
         return getMatchDetails(match.id)
     }
 
@@ -132,8 +140,13 @@ class MatchRepositoryImpl @Inject constructor(
 
         if (status == MatchStatus.CANCELLED || status == MatchStatus.COMPLETED) {
             notificationRepository.cancelMatchReminder(matchId)
+            notificationRepository.cancelMatchReadinessMonitoring(matchId)
         } else {
             notificationRepository.scheduleMatchReminder(
+                matchId = matchId,
+                scheduledStartTime = Instant.ofEpochMilli(match.scheduledStartTime)
+            )
+            notificationRepository.scheduleMatchReadinessMonitoring(
                 matchId = matchId,
                 scheduledStartTime = Instant.ofEpochMilli(match.scheduledStartTime)
             )

@@ -24,6 +24,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -38,7 +39,8 @@ fun HomeScreen(
     onCreateMatch: () -> Unit,
     onMyReservations: () -> Unit,
     onMyMatches: () -> Unit,
-    onOpenAssistant: () -> Unit
+    onOpenAssistant: () -> Unit,
+    onRefreshMonitoring: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -105,6 +107,22 @@ fun HomeScreen(
                 onClick = onOpenAssistant,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            if (uiState.readinessAlertCount > 0) {
+                SectionHeader(
+                    title = "Matches Need Attention",
+                    subtitle = "${uiState.readinessAlertCount} active alert(s) from readiness monitoring"
+                )
+                uiState.readinessHighlights.forEach { item ->
+                    InfoCard(text = item)
+                }
+                TextButton(
+                    onClick = onRefreshMonitoring,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Refresh Monitoring Alerts")
+                }
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
 

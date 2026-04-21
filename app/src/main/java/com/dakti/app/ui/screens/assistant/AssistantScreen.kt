@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AssistantScreen(
     uiState: AssistantUiState,
+    onBack: (() -> Unit)? = null,
     onInputChanged: (String) -> Unit,
     onSendMessage: () -> Unit,
     onPromptSelected: (String) -> Unit,
@@ -61,7 +62,16 @@ fun AssistantScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(title = { Text(text = "Assistant") })
+            CenterAlignedTopAppBar(
+                title = { Text(text = "Assistant") },
+                navigationIcon = {
+                    if (onBack != null) {
+                        TextButton(onClick = onBack) {
+                            Text(text = "Back")
+                        }
+                    }
+                }
+            )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->

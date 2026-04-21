@@ -49,6 +49,13 @@ class NotificationHelper @Inject constructor(
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = NotificationChannels.INVITATION_CHANNEL_DESC
+            },
+            NotificationChannel(
+                NotificationChannels.MONITORING_CHANNEL_ID,
+                NotificationChannels.MONITORING_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = NotificationChannels.MONITORING_CHANNEL_DESC
             }
         )
 
@@ -111,6 +118,7 @@ class NotificationHelper @Inject constructor(
             AppNotificationCategory.MATCH_REMINDER,
             AppNotificationCategory.MATCH_UPDATE -> NotificationChannels.MATCH_CHANNEL_ID
             AppNotificationCategory.INVITATION_REMINDER -> NotificationChannels.INVITATION_CHANNEL_ID
+            AppNotificationCategory.MATCH_MONITORING_ALERT -> NotificationChannels.MONITORING_CHANNEL_ID
         }
     }
 }

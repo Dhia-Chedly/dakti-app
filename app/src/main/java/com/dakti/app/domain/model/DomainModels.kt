@@ -80,6 +80,21 @@ enum class AssistantActionType {
     CREATE_RESERVATION_AND_MATCH
 }
 
+enum class MatchReadinessStatus {
+    READY,
+    AT_RISK,
+    INSUFFICIENT_PLAYERS,
+    NEEDS_ORGANIZER_ACTION
+}
+
+enum class MonitoringSuggestedActionType {
+    REMIND_PENDING_PLAYERS,
+    INVITE_MORE_PLAYERS,
+    REVIEW_RESCHEDULE_OPTIONS,
+    PREPARE_UPDATE_MESSAGE,
+    OPEN_ASSISTANT
+}
+
 data class User(
     val id: String,
     val displayName: String,
@@ -384,6 +399,62 @@ data class AssistantReply(
     val quickActions: List<AssistantQuickAction>,
     val providerLabel: String,
     val usedFallback: Boolean
+)
+
+data class SuggestedAction(
+    val id: String,
+    val type: MonitoringSuggestedActionType,
+    val title: String,
+    val description: String?
+)
+
+data class ReschedulingSuggestion(
+    val id: String,
+    val venueId: String,
+    val venueName: String,
+    val venueAddress: String,
+    val timeSlotId: String,
+    val timeSlotLabel: String,
+    val startTime: Instant,
+    val endTime: Instant,
+    val reason: String
+)
+
+data class MatchMonitoringResult(
+    val matchId: String,
+    val matchTitle: String,
+    val sportType: String,
+    val venueName: String,
+    val scheduledStartTime: Instant,
+    val status: MatchReadinessStatus,
+    val reason: String,
+    val summary: String,
+    val requiredPlayers: Int,
+    val invitedPlayersCount: Int,
+    val confirmedPlayersCount: Int,
+    val pendingPlayersCount: Int,
+    val declinedPlayersCount: Int,
+    val remainingSpots: Int,
+    val minutesUntilMatch: Long,
+    val shouldAlertOrganizer: Boolean,
+    val suggestedActions: List<SuggestedAction>,
+    val reschedulingSuggestions: List<ReschedulingSuggestion>,
+    val reminderMessageText: String?,
+    val updateMessageText: String?
+)
+
+data class MonitoringAlert(
+    val id: String,
+    val matchId: String,
+    val title: String,
+    val body: String,
+    val status: MatchReadinessStatus,
+    val createdAt: Instant,
+    val summary: String,
+    val suggestedActions: List<SuggestedAction>,
+    val reschedulingSuggestions: List<ReschedulingSuggestion>,
+    val reminderMessageText: String?,
+    val updateMessageText: String?
 )
 
 data class UserWithProfiles(

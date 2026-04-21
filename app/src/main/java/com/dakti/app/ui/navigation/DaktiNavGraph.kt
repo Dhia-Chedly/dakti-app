@@ -206,7 +206,8 @@ fun DaktiNavGraph(
                         onCreateMatch = { navController.navigate(AppRoute.CreateMatch.create(null)) },
                         onMyReservations = { navController.navigate(AppRoute.MyReservations.route) },
                         onMyMatches = { navController.navigate(AppRoute.MyMatches.route) },
-                        onOpenAssistant = { navController.navigate(AppRoute.Assistant.route) }
+                        onOpenAssistant = { navController.navigate(AppRoute.Assistant.route) },
+                        onRefreshMonitoring = viewModel::refreshMonitoringHighlights
                     )
                 }
 
@@ -255,6 +256,62 @@ fun DaktiNavGraph(
 
                     AssistantScreen(
                         uiState = state,
+                        onInputChanged = viewModel::onInputChanged,
+                        onSendMessage = viewModel::sendCurrentMessage,
+                        onPromptSelected = viewModel::sendSuggestedPrompt,
+                        onQuickActionSelected = viewModel::sendQuickAction,
+                        onUseVenueSuggestion = viewModel::useVenueSuggestion,
+                        onConfirmAction = viewModel::confirmPendingAction,
+                        onCancelAction = viewModel::cancelPendingAction,
+                        onSendGeneratedViaWhatsApp = { generated ->
+                            val payload = viewModel.buildSharePayload(generated)
+                            if (payload == null) {
+                                "Generated text is empty."
+                            } else {
+                                externalActions.launchWhatsApp(context, payload)
+                            }
+                        },
+                        onSendGeneratedViaEmail = { generated ->
+                            val payload = viewModel.buildEmailPayload(generated)
+                            if (payload == null) {
+                                "Generated text is empty."
+                            } else {
+                                externalActions.launchEmail(context, payload)
+                            }
+                        },
+                        onRetry = viewModel::retryLastFailedMessage,
+                        onDismissError = viewModel::clearError,
+                        onDismissActionResult = viewModel::clearActionResultMessage
+                    )
+                }
+
+                composable(
+                    route = AppRoute.AssistantMatchContext.route,
+                    arguments = listOf(navArgument("matchId") { type = NavType.StringType })
+                ) { entry ->
+                    val matchId = entry.arguments?.getString("matchId").orEmpty()
+                    val viewModel: AssistantViewModel = hiltViewModel()
+                    val externalActions: ExternalActionViewModel = hiltViewModel()
+                    val context = LocalContext.current
+                    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+                    LaunchedEffect(matchId) {
+                        viewModel.setAssistantContext(
+                            com.dakti.app.domain.model.AssistantContext(
+                                sourceRoute = AppRoute.MatchDetails.route,
+                                matchId = matchId,
+                                reservationId = null,
+                                venueId = null
+                            )
+                        )
+                        viewModel.sendSuggestedPrompt(
+                            "This match is at risk. Suggest reminders, next actions, and reschedule options."
+                        )
+                    }
+
+                    AssistantScreen(
+                        uiState = state,
+                        onBack = { navController.popBackStack() },
                         onInputChanged = viewModel::onInputChanged,
                         onSendMessage = viewModel::sendCurrentMessage,
                         onPromptSelected = viewModel::sendSuggestedPrompt,
@@ -494,9 +551,16 @@ fun DaktiNavGraph(
                     MatchDetailsScreen(
                         isLoading = state.isDetailsLoading,
                         details = state.selectedMatchDetails,
+                        isMonitoringLoading = state.isMonitoringLoading,
+                        readiness = state.selectedMatchReadiness,
+                        monitoringErrorMessage = state.monitoringErrorMessage,
                         errorMessage = state.detailsErrorMessage,
                         onBack = { navController.popBackStack() },
                         onInvitePlayers = { navController.navigate(AppRoute.InvitePlayers.create(matchId)) },
+                        onRefreshMonitoring = { viewModel.refreshMatchReadiness(matchId) },
+                        onOpenAssistantSuggestions = {
+                            navController.navigate(AppRoute.AssistantMatchContext.create(matchId))
+                        },
                         onSendInvitationViaWhatsApp = {
                             val payload = viewModel.buildInvitationSharePayloadForSelectedMatch()
                             if (payload == null) {
@@ -513,6 +577,22 @@ fun DaktiNavGraph(
                                 externalActions.launchWhatsApp(context, payload)
                             }
                         },
+                        onSendMonitoringReminderViaWhatsApp = {
+                            val payload = viewModel.buildMonitoringReminderSharePayloadForSelectedMatch()
+                            if (payload == null) {
+                                "Monitoring reminder is unavailable."
+                            } else {
+                                externalActions.launchWhatsApp(context, payload)
+                            }
+                        },
+                        onSendMonitoringUpdateViaWhatsApp = {
+                            val payload = viewModel.buildMonitoringUpdateSharePayloadForSelectedMatch()
+                            if (payload == null) {
+                                "Monitoring update text is unavailable."
+                            } else {
+                                externalActions.launchWhatsApp(context, payload)
+                            }
+                        },
                         onSendInvitationViaEmail = {
                             val payload = viewModel.buildInvitationEmailPayloadForSelectedMatch()
                             if (payload == null) {
@@ -525,6 +605,22 @@ fun DaktiNavGraph(
                             val payload = viewModel.buildReminderEmailPayloadForSelectedMatch()
                             if (payload == null) {
                                 "Match details are unavailable."
+                            } else {
+                                externalActions.launchEmail(context, payload)
+                            }
+                        },
+                        onSendMonitoringReminderViaEmail = {
+                            val payload = viewModel.buildMonitoringReminderEmailPayloadForSelectedMatch()
+                            if (payload == null) {
+                                "Monitoring reminder is unavailable."
+                            } else {
+                                externalActions.launchEmail(context, payload)
+                            }
+                        },
+                        onSendMonitoringUpdateViaEmail = {
+                            val payload = viewModel.buildMonitoringUpdateEmailPayloadForSelectedMatch()
+                            if (payload == null) {
+                                "Monitoring update text is unavailable."
                             } else {
                                 externalActions.launchEmail(context, payload)
                             }

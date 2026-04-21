@@ -1,6 +1,7 @@
 package com.dakti.app.domain.usecase
 
 import com.dakti.app.domain.model.Notification
+import com.dakti.app.domain.model.MonitoringAlert
 import com.dakti.app.domain.model.Reservation
 import com.dakti.app.domain.repository.NotificationRepository
 import java.time.Instant
@@ -62,4 +63,30 @@ class NotifyMatchUpdatedUseCase @Inject constructor(
         matchId = matchId,
         updateMessage = updateMessage
     )
+}
+
+class SendMatchMonitoringAlertNotificationUseCase @Inject constructor(
+    private val notificationRepository: NotificationRepository
+) {
+    suspend operator fun invoke(alert: MonitoringAlert) =
+        notificationRepository.sendMatchMonitoringAlertNotification(alert)
+}
+
+class ScheduleMatchReadinessMonitoringUseCase @Inject constructor(
+    private val notificationRepository: NotificationRepository
+) {
+    suspend operator fun invoke(
+        matchId: String,
+        scheduledStartTime: Instant
+    ) = notificationRepository.scheduleMatchReadinessMonitoring(
+        matchId = matchId,
+        scheduledStartTime = scheduledStartTime
+    )
+}
+
+class CancelMatchReadinessMonitoringUseCase @Inject constructor(
+    private val notificationRepository: NotificationRepository
+) {
+    suspend operator fun invoke(matchId: String) =
+        notificationRepository.cancelMatchReadinessMonitoring(matchId)
 }

@@ -21,19 +21,29 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.matches.MatchDetailsUi
+import com.dakti.app.presentation.matches.MatchReadinessUi
 import kotlinx.coroutines.launch
 
 @Composable
 fun MatchDetailsScreen(
     isLoading: Boolean,
     details: MatchDetailsUi?,
+    isMonitoringLoading: Boolean,
+    readiness: MatchReadinessUi?,
+    monitoringErrorMessage: String?,
     errorMessage: String?,
     onBack: () -> Unit,
     onInvitePlayers: () -> Unit,
+    onRefreshMonitoring: () -> Unit,
+    onOpenAssistantSuggestions: () -> Unit,
     onSendInvitationViaWhatsApp: () -> String?,
     onSendReminderViaWhatsApp: () -> String?,
+    onSendMonitoringReminderViaWhatsApp: () -> String?,
+    onSendMonitoringUpdateViaWhatsApp: () -> String?,
     onSendInvitationViaEmail: () -> String?,
     onSendReminderViaEmail: () -> String?,
+    onSendMonitoringReminderViaEmail: () -> String?,
+    onSendMonitoringUpdateViaEmail: () -> String?,
     onOpenInMaps: () -> String?,
     onAddToCalendar: () -> String?
 ) {
@@ -80,6 +90,40 @@ fun MatchDetailsScreen(
                     MatchSummaryCard(details = details)
                 }
 
+                if (isMonitoringLoading) {
+                    item {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                if (monitoringErrorMessage != null) {
+                    item {
+                        MatchEmptyState(
+                            title = "Monitoring unavailable",
+                            message = monitoringErrorMessage,
+                            actionLabel = "Refresh readiness",
+                            onActionClick = onRefreshMonitoring
+                        )
+                    }
+                }
+
+                readiness?.let { matchReadiness ->
+                    item {
+                        MatchReadinessCard(readiness = matchReadiness)
+                    }
+                    item {
+                        MatchMonitoringActionsCard(readiness = matchReadiness)
+                    }
+                    item {
+                        OutlinedButton(
+                            onClick = onRefreshMonitoring,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = "Refresh Readiness")
+                        }
+                    }
+                }
+
                 item {
                     OutlinedButton(
                         onClick = onInvitePlayers,
@@ -120,6 +164,34 @@ fun MatchDetailsScreen(
                 item {
                     OutlinedButton(
                         onClick = {
+                            val message = onSendMonitoringReminderViaWhatsApp()
+                            message?.let { result ->
+                                coroutineScope.launch { snackbarHostState.showSnackbar(result) }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Send Monitoring Reminder (WhatsApp)")
+                    }
+                }
+
+                item {
+                    OutlinedButton(
+                        onClick = {
+                            val message = onSendMonitoringUpdateViaWhatsApp()
+                            message?.let { result ->
+                                coroutineScope.launch { snackbarHostState.showSnackbar(result) }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Send Monitoring Update (WhatsApp)")
+                    }
+                }
+
+                item {
+                    OutlinedButton(
+                        onClick = {
                             val message = onSendInvitationViaEmail()
                             message?.let { result ->
                                 coroutineScope.launch { snackbarHostState.showSnackbar(result) }
@@ -142,6 +214,43 @@ fun MatchDetailsScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(text = "Send Reminder (Email)")
+                    }
+                }
+
+                item {
+                    OutlinedButton(
+                        onClick = {
+                            val message = onSendMonitoringReminderViaEmail()
+                            message?.let { result ->
+                                coroutineScope.launch { snackbarHostState.showSnackbar(result) }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Send Monitoring Reminder (Email)")
+                    }
+                }
+
+                item {
+                    OutlinedButton(
+                        onClick = {
+                            val message = onSendMonitoringUpdateViaEmail()
+                            message?.let { result ->
+                                coroutineScope.launch { snackbarHostState.showSnackbar(result) }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Send Monitoring Update (Email)")
+                    }
+                }
+
+                item {
+                    OutlinedButton(
+                        onClick = onOpenAssistantSuggestions,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Open Assistant Suggestions")
                     }
                 }
 

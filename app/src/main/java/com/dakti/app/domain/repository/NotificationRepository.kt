@@ -1,6 +1,7 @@
 package com.dakti.app.domain.repository
 
 import com.dakti.app.domain.model.Notification
+import com.dakti.app.domain.model.MonitoringAlert
 import com.dakti.app.domain.model.Reservation
 import com.dakti.app.util.Resource
 import java.time.Instant
@@ -26,6 +27,10 @@ interface NotificationRepository {
         updateMessage: String? = null
     ): Resource<Unit>
 
+    suspend fun sendMatchMonitoringAlertNotification(
+        alert: MonitoringAlert
+    ): Resource<Unit>
+
     suspend fun scheduleMatchReminder(
         matchId: String,
         scheduledStartTime: Instant
@@ -36,4 +41,11 @@ interface NotificationRepository {
     suspend fun scheduleInvitationReminder(matchId: String): Resource<Unit>
 
     suspend fun cancelInvitationReminder(matchId: String): Resource<Unit>
+
+    suspend fun scheduleMatchReadinessMonitoring(
+        matchId: String,
+        scheduledStartTime: Instant
+    ): Resource<Unit>
+
+    suspend fun cancelMatchReadinessMonitoring(matchId: String): Resource<Unit>
 }

@@ -13,6 +13,9 @@ sealed class AppRoute(val route: String) {
     data object Venues : AppRoute("venues")
     data object Matches : AppRoute("matches")
     data object Assistant : AppRoute("assistant")
+    data object AssistantMatchContext : AppRoute("assistant_match_context/{matchId}") {
+        fun create(matchId: String): String = "assistant_match_context/$matchId"
+    }
     data object Profile : AppRoute("profile")
 
     data object VenueDetails : AppRoute("venue_details/{venueId}") {

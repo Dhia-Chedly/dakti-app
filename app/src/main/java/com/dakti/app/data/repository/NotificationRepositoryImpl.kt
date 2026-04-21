@@ -10,6 +10,7 @@ import com.dakti.app.domain.model.Notification
 import com.dakti.app.domain.model.NotificationType
 import com.dakti.app.domain.model.Reservation
 import com.dakti.app.domain.model.MatchStatus
+import com.dakti.app.domain.model.MonitoringAlert
 import com.dakti.app.domain.repository.NotificationRepository
 import com.dakti.app.notification.AppNotificationCategory
 import com.dakti.app.notification.AppNotificationPayload
@@ -178,6 +179,31 @@ class NotificationRepositoryImpl @Inject constructor(
         return dispatchResult.toResource()
     }
 
+    override suspend fun sendMatchMonitoringAlertNotification(
+        alert: MonitoringAlert
+    ): Resource<Unit> {
+        val payload = AppNotificationPayload(
+            stableKey = "match_monitoring_${alert.matchId}_${alert.status.name}",
+            category = AppNotificationCategory.MATCH_MONITORING_ALERT,
+            title = alert.title,
+            body = alert.body,
+            targetRoute = AppRoute.MatchDetails.create(alert.matchId),
+            relatedMatchId = alert.matchId
+        )
+
+        val dispatchResult = notificationHelper.dispatch(payload)
+        val relatedMatch = matchDao.getMatchById(alert.matchId)
+        persistNotification(
+            userId = relatedMatch?.organizerId,
+            type = NotificationType.SYSTEM_ALERT,
+            title = payload.title,
+            content = payload.body,
+            relatedMatchId = alert.matchId,
+            relatedReservationId = relatedMatch?.reservationId
+        )
+        return dispatchResult.toResource()
+    }
+
     override suspend fun scheduleMatchReminder(
         matchId: String,
         scheduledStartTime: Instant
@@ -216,6 +242,32 @@ class NotificationRepositoryImpl @Inject constructor(
                 return@withContext Resource.Error("Match id is required.")
             }
             workScheduler.cancelInvitationReminder(matchId)
+            Resource.Success(Unit)
+        }
+
+    override suspend fun scheduleMatchReadinessMonitoring(
+        matchId: String,
+        scheduledStartTime: Instant
+    ): Resource<Unit> = withContext(Dispatchers.Default) {
+        if (matchId.isBlank()) {
+            return@withContext Resource.Error("Match id is required.")
+        }
+        if (!scheduledStartTime.isAfter(Instant.now())) {
+            return@withContext Resource.Error("Match time has already passed.")
+        }
+        workScheduler.scheduleMatchReadinessMonitoring(
+            matchId = matchId,
+            scheduledStartTime = scheduledStartTime
+        )
+        Resource.Success(Unit)
+    }
+
+    override suspend fun cancelMatchReadinessMonitoring(matchId: String): Resource<Unit> =
+        withContext(Dispatchers.Default) {
+            if (matchId.isBlank()) {
+                return@withContext Resource.Error("Match id is required.")
+            }
+            workScheduler.cancelMatchReadinessMonitoring(matchId)
             Resource.Success(Unit)
         }
 

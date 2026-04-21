@@ -63,6 +63,40 @@ class ExecuteAssistantActionUseCase @Inject constructor(
         assistantRepository.executeAssistantAction(proposal)
 }
 
+class EvaluateMatchReadinessUseCase @Inject constructor(
+    private val assistantRepository: AssistantRepository
+) {
+    suspend operator fun invoke(matchId: String) =
+        assistantRepository.evaluateMatchReadiness(matchId)
+}
+
+class EvaluateMyMatchReadinessUseCase @Inject constructor(
+    private val assistantRepository: AssistantRepository
+) {
+    suspend operator fun invoke() = assistantRepository.evaluateMyMatchReadiness()
+}
+
+class GenerateMonitoringReminderMessageUseCase @Inject constructor(
+    private val assistantRepository: AssistantRepository
+) {
+    suspend operator fun invoke(matchId: String) =
+        assistantRepository.generateMonitoringReminderMessage(matchId)
+}
+
+class GenerateMonitoringUpdateMessageUseCase @Inject constructor(
+    private val assistantRepository: AssistantRepository
+) {
+    suspend operator fun invoke(matchId: String) =
+        assistantRepository.generateMonitoringUpdateMessage(matchId)
+}
+
+class MonitorMatchAndBuildAlertUseCase @Inject constructor(
+    private val assistantRepository: AssistantRepository
+) {
+    suspend operator fun invoke(matchId: String) =
+        assistantRepository.monitorMatchAndBuildAlert(matchId)
+}
+
 class GetAssistantQuickActionsUseCase @Inject constructor(
     private val assistantRepository: AssistantRepository
 ) {
@@ -74,4 +108,3 @@ class GetAssistantSuggestedPromptsUseCase @Inject constructor(
 ) {
     operator fun invoke() = assistantRepository.getSuggestedPrompts()
 }
-

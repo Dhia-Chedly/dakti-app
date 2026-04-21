@@ -4,7 +4,8 @@ enum class AppNotificationCategory {
     RESERVATION_CONFIRMATION,
     MATCH_REMINDER,
     INVITATION_REMINDER,
-    MATCH_UPDATE
+    MATCH_UPDATE,
+    MATCH_MONITORING_ALERT
 }
 
 data class AppNotificationPayload(

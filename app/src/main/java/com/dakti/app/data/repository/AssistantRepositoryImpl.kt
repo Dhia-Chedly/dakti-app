@@ -12,6 +12,8 @@ import com.dakti.app.domain.model.AssistantActionProposal
 import com.dakti.app.domain.model.AssistantContext
 import com.dakti.app.domain.model.AssistantConversationMessage
 import com.dakti.app.domain.model.AssistantGeneratedMessage
+import com.dakti.app.domain.model.MatchMonitoringResult
+import com.dakti.app.domain.model.MonitoringAlert
 import com.dakti.app.domain.model.AssistantQuickAction
 import com.dakti.app.domain.model.AssistantReply
 import com.dakti.app.domain.model.AssistantStructuredRequest
@@ -100,6 +102,23 @@ class AssistantRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun evaluateMatchReadiness(
+        matchId: String
+    ): Resource<MatchMonitoringResult> =
+        orchestrator.evaluateMatchReadiness(matchId)
+
+    override suspend fun evaluateMyMatchReadiness(): Resource<List<MatchMonitoringResult>> =
+        orchestrator.evaluateMyMatchReadiness()
+
+    override suspend fun generateMonitoringReminderMessage(matchId: String): Resource<String> =
+        orchestrator.generateMonitoringReminderMessage(matchId)
+
+    override suspend fun generateMonitoringUpdateMessage(matchId: String): Resource<String> =
+        orchestrator.generateMonitoringUpdateMessage(matchId)
+
+    override suspend fun monitorMatchAndBuildAlert(matchId: String): Resource<MonitoringAlert?> =
+        orchestrator.monitorMatchAndBuildAlert(matchId)
+
     override fun getQuickActions(): List<AssistantQuickAction> =
         listOf(
             AssistantQuickAction(
@@ -126,6 +145,11 @@ class AssistantRepositoryImpl @Inject constructor(
                 id = "generate_reminder",
                 title = "Generate Reminder",
                 prompt = "Generate reminder message for tomorrow's match"
+            ),
+            AssistantQuickAction(
+                id = "check_readiness",
+                title = "Check Readiness",
+                prompt = "Assess match readiness and suggest next steps if players are low"
             )
         )
 
@@ -135,7 +159,8 @@ class AssistantRepositoryImpl @Inject constructor(
             "Suggest available basketball venues around 7 PM tomorrow",
             "Suggest another time because my preferred slot is unavailable",
             "Generate invitation message for my upcoming match",
-            "Generate reminder message for tomorrow's match"
+            "Generate reminder message for tomorrow's match",
+            "My match is short of players. Suggest reminders and reschedule options."
         )
 
     private suspend fun logAssistantRequestAndSuggestions(
