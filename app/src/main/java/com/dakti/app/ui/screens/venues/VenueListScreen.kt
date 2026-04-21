@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -18,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.venues.VenueListItemUi
+import com.dakti.app.ui.components.AppLoadingState
 import com.dakti.app.ui.components.SectionHeader
 
 @Composable
@@ -76,7 +76,7 @@ fun VenueListScreen(
 
             if (isLoading) {
                 item {
-                    CircularProgressIndicator()
+                    AppLoadingState(message = "Loading venues...")
                 }
             }
 

@@ -26,12 +26,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.auth.RegisterFormState
+import com.dakti.app.ui.components.AppInlineMessage
+import com.dakti.app.ui.components.SectionHeader
 
 @Composable
 fun RegisterScreen(
     formState: RegisterFormState,
     isLoading: Boolean,
     feedbackMessage: String?,
+    feedbackIsError: Boolean,
     onNameChanged: (String) -> Unit,
     onEmailChanged: (String) -> Unit,
     onPhoneChanged: (String) -> Unit,
@@ -61,13 +64,9 @@ fun RegisterScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Create your Dakti account",
-                style = MaterialTheme.typography.headlineSmall
-            )
-            Text(
-                text = "Set up your profile to start organizing games.",
-                style = MaterialTheme.typography.bodyMedium
+            SectionHeader(
+                title = "Create your Dakti account",
+                subtitle = "Set up your profile to start organizing games."
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -139,10 +138,9 @@ fun RegisterScreen(
             )
 
             feedbackMessage?.let { message ->
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error
+                AppInlineMessage(
+                    message = message,
+                    isError = feedbackIsError
                 )
             }
 

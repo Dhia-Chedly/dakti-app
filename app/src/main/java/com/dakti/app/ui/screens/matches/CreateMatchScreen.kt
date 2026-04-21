@@ -19,10 +19,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.matches.MatchCreateFormState
 import com.dakti.app.presentation.matches.MatchReservationContextUi
 import com.dakti.app.presentation.matches.MatchVenueOptionUi
+import com.dakti.app.ui.components.AppInlineMessage
+import com.dakti.app.ui.components.AppStateCard
 import com.dakti.app.ui.components.SectionHeader
 
 @Composable
@@ -74,21 +78,29 @@ fun CreateMatchScreen(
                 )
             }
 
-            item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item {
-                        FilterChip(
-                            selected = formState.selectedReservationId == null,
-                            onClick = { onReservationSelected(null) },
-                            label = { Text("No reservation") }
-                        )
-                    }
-                    items(reservationContexts) { context ->
-                        FilterChip(
-                            selected = formState.selectedReservationId == context.reservationId,
-                            onClick = { onReservationSelected(context.reservationId) },
-                            label = { Text(context.displayLabel) }
-                        )
+            if (reservationContexts.isEmpty()) {
+                item {
+                    AppStateCard(
+                        message = "No reservation context yet. You can still create a match by selecting a venue."
+                    )
+                }
+            } else {
+                item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            FilterChip(
+                                selected = formState.selectedReservationId == null,
+                                onClick = { onReservationSelected(null) },
+                                label = { Text("No reservation") }
+                            )
+                        }
+                        items(reservationContexts) { context ->
+                            FilterChip(
+                                selected = formState.selectedReservationId == context.reservationId,
+                                onClick = { onReservationSelected(context.reservationId) },
+                                label = { Text(context.displayLabel) }
+                            )
+                        }
                     }
                 }
             }
@@ -100,14 +112,23 @@ fun CreateMatchScreen(
                 )
             }
 
-            item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(venueOptions) { venue ->
-                        FilterChip(
-                            selected = formState.selectedVenueId == venue.venueId,
-                            onClick = { onVenueSelected(venue.venueId) },
-                            label = { Text("${venue.venueName} (${venue.sportType})") }
-                        )
+            if (venueOptions.isEmpty()) {
+                item {
+                    AppStateCard(
+                        title = "No venues available",
+                        message = "Venue options are unavailable right now. Return to Venues and refresh data."
+                    )
+                }
+            } else {
+                item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(venueOptions) { venue ->
+                            FilterChip(
+                                selected = formState.selectedVenueId == venue.venueId,
+                                onClick = { onVenueSelected(venue.venueId) },
+                                label = { Text("${venue.venueName} (${venue.sportType})") }
+                            )
+                        }
                     }
                 }
             }
@@ -128,6 +149,9 @@ fun CreateMatchScreen(
                     onValueChange = onScheduledAtChanged,
                     label = { Text("Scheduled At (yyyy-MM-dd HH:mm)") },
                     singleLine = true,
+                    supportingText = {
+                        Text("Example: 2026-05-01 18:00")
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -138,6 +162,7 @@ fun CreateMatchScreen(
                     onValueChange = onRequiredPlayersChanged,
                     label = { Text("Required Players") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -154,20 +179,18 @@ fun CreateMatchScreen(
 
             if (errorMessage != null) {
                 item {
-                    Text(
-                        text = errorMessage,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
+                    AppInlineMessage(
+                        message = errorMessage,
+                        isError = true
                     )
                 }
             }
 
             if (successMessage != null) {
                 item {
-                    Text(
-                        text = successMessage,
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.bodyMedium
+                    AppInlineMessage(
+                        message = successMessage,
+                        isError = false
                     )
                 }
             }

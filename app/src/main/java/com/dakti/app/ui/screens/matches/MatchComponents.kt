@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
@@ -16,15 +17,45 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.dakti.app.domain.model.MatchReadinessStatus
+import com.dakti.app.domain.model.MatchStatus
 import com.dakti.app.presentation.matches.MatchDetailsUi
 import com.dakti.app.presentation.matches.MatchListItemUi
 import com.dakti.app.presentation.matches.MatchReadinessUi
+import com.dakti.app.ui.components.AppStateCard
 
 @Composable
-fun MatchStatusChip(statusLabel: String) {
+fun MatchStatusChip(
+    statusLabel: String,
+    status: MatchStatus? = null
+) {
+    val colors = when (status) {
+        MatchStatus.CANCELLED -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            labelColor = MaterialTheme.colorScheme.onErrorContainer
+        )
+
+        MatchStatus.CONFIRMED,
+        MatchStatus.FULL -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+
+        MatchStatus.COMPLETED -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        else -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+    }
+
     AssistChip(
         onClick = {},
         enabled = false,
+        colors = colors,
         label = { Text(text = statusLabel) }
     )
 }
@@ -81,7 +112,10 @@ fun MatchCard(
                 text = match.scheduledLabel,
                 style = MaterialTheme.typography.bodySmall
             )
-            MatchStatusChip(statusLabel = match.statusLabel)
+            MatchStatusChip(
+                statusLabel = match.statusLabel,
+                status = match.status
+            )
             PlayersProgressIndicator(
                 confirmedPlayers = match.confirmedPlayersCount,
                 requiredPlayers = match.requiredPlayers
@@ -131,7 +165,10 @@ fun MatchSummaryCard(details: MatchDetailsUi) {
                 text = details.scheduledLabel,
                 style = MaterialTheme.typography.bodyMedium
             )
-            MatchStatusChip(statusLabel = details.statusLabel)
+            MatchStatusChip(
+                statusLabel = details.statusLabel,
+                status = details.status
+            )
             PlayersProgressIndicator(
                 confirmedPlayers = details.confirmedPlayersCount,
                 requiredPlayers = details.requiredPlayers
@@ -177,10 +214,10 @@ fun MatchSummaryCard(details: MatchDetailsUi) {
 @Composable
 fun MatchReadinessCard(readiness: MatchReadinessUi) {
     val containerColor = when (readiness.status) {
-        com.dakti.app.domain.model.MatchReadinessStatus.READY -> MaterialTheme.colorScheme.tertiaryContainer
-        com.dakti.app.domain.model.MatchReadinessStatus.AT_RISK -> MaterialTheme.colorScheme.secondaryContainer
-        com.dakti.app.domain.model.MatchReadinessStatus.INSUFFICIENT_PLAYERS -> MaterialTheme.colorScheme.errorContainer
-        com.dakti.app.domain.model.MatchReadinessStatus.NEEDS_ORGANIZER_ACTION -> MaterialTheme.colorScheme.secondaryContainer
+        MatchReadinessStatus.READY -> MaterialTheme.colorScheme.tertiaryContainer
+        MatchReadinessStatus.AT_RISK -> MaterialTheme.colorScheme.secondaryContainer
+        MatchReadinessStatus.INSUFFICIENT_PLAYERS -> MaterialTheme.colorScheme.errorContainer
+        MatchReadinessStatus.NEEDS_ORGANIZER_ACTION -> MaterialTheme.colorScheme.secondaryContainer
     }
 
     Card(
@@ -273,28 +310,10 @@ fun MatchEmptyState(
     actionLabel: String,
     onActionClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            OutlinedButton(onClick = onActionClick) {
-                Text(text = actionLabel)
-            }
-        }
-    }
+    AppStateCard(
+        title = title,
+        message = message,
+        actionLabel = actionLabel,
+        onActionClick = onActionClick
+    )
 }

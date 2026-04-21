@@ -15,7 +15,6 @@ import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -24,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.matches.MatchListItemUi
+import com.dakti.app.ui.components.AppLoadingState
 import com.dakti.app.ui.components.DashboardActionCard
 import com.dakti.app.ui.components.SectionHeader
 
@@ -113,7 +113,7 @@ fun MatchesScreen(
 
             if (isLoading) {
                 item {
-                    CircularProgressIndicator()
+                    AppLoadingState(message = "Loading matches...")
                 }
             }
 

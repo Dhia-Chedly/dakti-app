@@ -26,7 +26,7 @@ fun SectionHeader(
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.titleLarge
         )
         subtitle?.let {
             Spacer(modifier = Modifier.height(4.dp))
@@ -57,7 +57,7 @@ fun DashboardActionCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(132.dp)
+                .height(138.dp)
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {

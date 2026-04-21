@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.assistant.AssistantGeneratedMessageUi
 import com.dakti.app.presentation.assistant.AssistantQuickActionUi
 import com.dakti.app.presentation.assistant.AssistantUiState
+import com.dakti.app.ui.components.SectionHeader
 import kotlinx.coroutines.launch
 
 @Composable
@@ -88,9 +89,16 @@ fun AssistantScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
+                    SectionHeader(
+                        title = "AI Organizer Assistant",
+                        subtitle = "Ask naturally, review structured suggestions, then confirm actions."
+                    )
+                }
+
+                item {
                     Text(
-                        text = "AI Organizer Assistant",
-                        style = MaterialTheme.typography.titleMedium
+                        text = "Quick Actions",
+                        style = MaterialTheme.typography.titleSmall
                     )
                 }
 

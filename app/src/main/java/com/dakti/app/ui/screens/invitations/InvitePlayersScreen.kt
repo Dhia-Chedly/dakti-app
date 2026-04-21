@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -20,6 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.invitations.InvitePlayersUiState
+import com.dakti.app.ui.components.AppInlineMessage
+import com.dakti.app.ui.components.AppLoadingState
+import com.dakti.app.ui.components.SectionHeader
 
 @Composable
 fun InvitePlayersScreen(
@@ -48,13 +50,13 @@ fun InvitePlayersScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text(
-                    text = if (uiState.matchTitle.isBlank()) {
-                        "Select players to invite."
+                SectionHeader(
+                    title = if (uiState.matchTitle.isBlank()) {
+                        "Invite Players"
                     } else {
                         uiState.matchTitle
                     },
-                    style = MaterialTheme.typography.titleLarge
+                    subtitle = "Select players, add an optional note, and send invitations."
                 )
             }
 
@@ -97,26 +99,24 @@ fun InvitePlayersScreen(
 
             uiState.successMessage?.takeIf { message -> message.isNotBlank() }?.let { message ->
                 item {
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                    AppInlineMessage(
+                        message = message,
+                        isError = false
                     )
                 }
             }
 
             uiState.errorMessage?.takeIf { message -> message.isNotBlank() }?.let { message ->
                 item {
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                    AppInlineMessage(
+                        message = message,
+                        isError = true
                     )
                 }
             }
 
             if (uiState.isLoading) {
-                item { CircularProgressIndicator() }
+                item { AppLoadingState(message = "Loading player candidates...") }
             }
 
             if (!uiState.isLoading && uiState.players.isEmpty()) {

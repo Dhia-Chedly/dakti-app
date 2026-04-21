@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -31,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.venues.VenueDetailsUi
+import com.dakti.app.ui.components.AppLoadingState
 import kotlinx.coroutines.launch
 
 @Composable
@@ -67,7 +67,7 @@ fun VenueDetailsScreen(
                         .padding(innerPadding)
                         .padding(16.dp)
                 ) {
-                    CircularProgressIndicator()
+                    AppLoadingState(message = "Loading venue details...")
                 }
             }
 

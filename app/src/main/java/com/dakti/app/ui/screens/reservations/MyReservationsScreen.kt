@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -18,6 +17,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.reservations.ReservationHistoryItemUi
+import com.dakti.app.ui.components.AppLoadingState
+import com.dakti.app.ui.components.SectionHeader
 
 @Composable
 fun MyReservationsScreen(
@@ -39,15 +40,15 @@ fun MyReservationsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text(
-                    text = "Your latest reservation history appears here.",
-                    style = MaterialTheme.typography.bodyMedium
+                SectionHeader(
+                    title = "Reservation History",
+                    subtitle = "Track recent bookings and continue into match setup from any reservation."
                 )
             }
 
             if (isLoading) {
                 item {
-                    CircularProgressIndicator()
+                    AppLoadingState(message = "Loading reservations...")
                 }
             }
 
@@ -84,7 +85,10 @@ fun MyReservationsScreen(
             }
 
             item {
-                TextButton(onClick = onBackToHome) {
+                TextButton(
+                    onClick = onBackToHome,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(text = "Back to Home")
                 }
             }

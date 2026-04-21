@@ -122,6 +122,11 @@ fun HomeScreen(
                 ) {
                     Text(text = "Refresh Monitoring Alerts")
                 }
+            } else {
+                SectionHeader(
+                    title = "Readiness Monitoring",
+                    subtitle = "No urgent match alerts right now."
+                )
             }
 
             Spacer(modifier = Modifier.height(4.dp))

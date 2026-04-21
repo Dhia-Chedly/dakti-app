@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.dakti.app.domain.model.ReservationStatus
 import com.dakti.app.presentation.reservations.ReservationDraftUi
 import com.dakti.app.presentation.reservations.ReservationHistoryItemUi
+import com.dakti.app.ui.components.AppStateCard
 
 @Composable
 fun ReservationSummaryCard(draft: ReservationDraftUi) {
@@ -54,7 +56,7 @@ fun ReservationSummaryCard(draft: ReservationDraftUi) {
                 status = if (draft.isSlotAvailable) {
                     ReservationStatus.PENDING
                 } else {
-                    ReservationStatus.CONFIRMED
+                    ReservationStatus.CANCELLED
                 }
             )
         }
@@ -120,10 +122,32 @@ fun ReservationStatusChip(status: ReservationStatus) {
         ReservationStatus.CANCELLED -> "Cancelled"
         ReservationStatus.COMPLETED -> "Completed"
     }
+    val colors = when (status) {
+        ReservationStatus.PENDING -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+
+        ReservationStatus.CONFIRMED -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+
+        ReservationStatus.CANCELLED -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            labelColor = MaterialTheme.colorScheme.onErrorContainer
+        )
+
+        ReservationStatus.COMPLETED -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 
     AssistChip(
         onClick = {},
         enabled = false,
+        colors = colors,
         label = { Text(text = label) }
     )
 }
@@ -134,25 +158,11 @@ fun ReservationEmptyState(
     actionLabel: String,
     onActionClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            OutlinedButton(onClick = onActionClick) {
-                Text(text = actionLabel)
-            }
-        }
-    }
+    AppStateCard(
+        message = message,
+        actionLabel = actionLabel,
+        onActionClick = onActionClick
+    )
 }
 
 @Composable

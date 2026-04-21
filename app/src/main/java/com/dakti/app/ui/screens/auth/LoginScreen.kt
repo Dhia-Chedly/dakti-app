@@ -26,12 +26,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.auth.LoginFormState
+import com.dakti.app.ui.components.AppInlineMessage
+import com.dakti.app.ui.components.SectionHeader
 
 @Composable
 fun LoginScreen(
     formState: LoginFormState,
     isLoading: Boolean,
     feedbackMessage: String?,
+    feedbackIsError: Boolean,
     onEmailChanged: (String) -> Unit,
     onPasswordChanged: (String) -> Unit,
     onLoginClick: () -> Unit,
@@ -58,13 +61,9 @@ fun LoginScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Welcome back",
-                style = MaterialTheme.typography.headlineSmall
-            )
-            Text(
-                text = "Sign in to continue organizing reservations and matches.",
-                style = MaterialTheme.typography.bodyMedium
+            SectionHeader(
+                title = "Welcome back",
+                subtitle = "Sign in to continue organizing reservations and matches."
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -97,10 +96,9 @@ fun LoginScreen(
             )
 
             feedbackMessage?.let { message ->
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error
+                AppInlineMessage(
+                    message = message,
+                    isError = feedbackIsError
                 )
             }
 

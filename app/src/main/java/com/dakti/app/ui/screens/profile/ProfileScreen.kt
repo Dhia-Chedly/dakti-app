@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -30,6 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.profile.ProfileUiState
+import com.dakti.app.ui.components.AppInlineMessage
+import com.dakti.app.ui.components.AppLoadingState
+import com.dakti.app.ui.components.SectionHeader
 
 @Composable
 fun ProfileScreen(
@@ -54,7 +56,7 @@ fun ProfileScreen(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                AppLoadingState(message = "Loading profile...")
             }
             return@Scaffold
         }
@@ -97,6 +99,11 @@ fun ProfileScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            SectionHeader(
+                title = "Profile Details",
+                subtitle = "Keep your contact and display information up to date."
+            )
+
             OutlinedTextField(
                 value = uiState.email,
                 onValueChange = {},
@@ -130,17 +137,16 @@ fun ProfileScreen(
             )
 
             uiState.errorMessage?.let { message ->
-                Text(
-                    text = message,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
+                AppInlineMessage(
+                    message = message,
+                    isError = true
                 )
             }
 
             uiState.statusMessage?.let { message ->
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyMedium
+                AppInlineMessage(
+                    message = message,
+                    isError = false
                 )
             }
 
@@ -161,16 +167,7 @@ fun ProfileScreen(
                         enabled = !uiState.isSaving,
                         modifier = Modifier.weight(1f)
                     ) {
-                        if (uiState.isSaving) {
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .padding(vertical = 2.dp)
-                                    .height(18.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text(text = "Save")
-                        }
+                        Text(text = if (uiState.isSaving) "Saving..." else "Save")
                     }
                 }
             } else {

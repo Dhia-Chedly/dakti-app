@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -19,12 +20,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.invitations.InvitationItemUi
 import com.dakti.app.presentation.invitations.PlayerSelectableItemUi
+import com.dakti.app.ui.components.AppStateCard
 
 @Composable
 fun InvitationStatusChip(statusLabel: String) {
+    val colors = when (statusLabel.lowercase()) {
+        "accepted" -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+
+        "declined" -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            labelColor = MaterialTheme.colorScheme.onErrorContainer
+        )
+
+        else -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+    }
+
     AssistChip(
         onClick = {},
         enabled = false,
+        colors = colors,
         label = { Text(text = statusLabel) }
     )
 }
@@ -206,18 +226,10 @@ fun InvitePlayersEmptyState(
     title: String,
     message: String
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(text = message, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
+    AppStateCard(
+        title = title,
+        message = message
+    )
 }
 
 @Composable
@@ -225,17 +237,8 @@ fun InvitationsEmptyState(
     title: String,
     message: String
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(text = message, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
+    AppStateCard(
+        title = title,
+        message = message
+    )
 }
-

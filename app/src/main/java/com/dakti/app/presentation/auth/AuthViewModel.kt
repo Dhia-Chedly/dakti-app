@@ -64,7 +64,8 @@ data class AuthUiState(
     val isRegisterLoading: Boolean = false,
     val loginForm: LoginFormState = LoginFormState(),
     val registerForm: RegisterFormState = RegisterFormState(),
-    val feedbackMessage: String? = null
+    val feedbackMessage: String? = null,
+    val feedbackIsError: Boolean = false
 )
 
 @HiltViewModel
@@ -120,7 +121,13 @@ class AuthViewModel @Inject constructor(
             passwordError = validatePassword(currentForm.password)
         )
 
-        _uiState.update { it.copy(loginForm = validatedForm, feedbackMessage = null) }
+        _uiState.update {
+            it.copy(
+                loginForm = validatedForm,
+                feedbackMessage = null,
+                feedbackIsError = false
+            )
+        }
 
         if (!validatedForm.canSubmit) {
             return
@@ -138,7 +145,8 @@ class AuthViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoginLoading = false,
-                            feedbackMessage = "Welcome ${result.data.displayName}"
+                            feedbackMessage = "Welcome ${result.data.displayName}",
+                            feedbackIsError = false
                         )
                     }
                 }
@@ -148,7 +156,8 @@ class AuthViewModel @Inject constructor(
                         it.copy(
                             isLoginLoading = false,
                             authStatus = AuthStatus.Error(result.message),
-                            feedbackMessage = result.message
+                            feedbackMessage = result.message,
+                            feedbackIsError = true
                         )
                     }
                 }
@@ -240,7 +249,13 @@ class AuthViewModel @Inject constructor(
             )
         )
 
-        _uiState.update { it.copy(registerForm = validatedForm, feedbackMessage = null) }
+        _uiState.update {
+            it.copy(
+                registerForm = validatedForm,
+                feedbackMessage = null,
+                feedbackIsError = false
+            )
+        }
 
         if (!validatedForm.canSubmit) {
             return
@@ -260,7 +275,8 @@ class AuthViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isRegisterLoading = false,
-                            feedbackMessage = "Account created for ${result.data.displayName}"
+                            feedbackMessage = "Account created for ${result.data.displayName}",
+                            feedbackIsError = false
                         )
                     }
                 }
@@ -270,7 +286,8 @@ class AuthViewModel @Inject constructor(
                         it.copy(
                             isRegisterLoading = false,
                             authStatus = AuthStatus.Error(result.message),
-                            feedbackMessage = result.message
+                            feedbackMessage = result.message,
+                            feedbackIsError = true
                         )
                     }
                 }
@@ -288,20 +305,27 @@ class AuthViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     authStatus = AuthStatus.Unauthenticated,
-                    feedbackMessage = "Logged out"
+                    feedbackMessage = "Logged out",
+                    feedbackIsError = false
                 )
             }
         }
     }
 
     fun clearFeedbackMessage() {
-        _uiState.update { it.copy(feedbackMessage = null) }
+        _uiState.update { it.copy(feedbackMessage = null, feedbackIsError = false) }
     }
 
     private fun clearAuthErrorIfNeeded() {
         val status = _uiState.value.authStatus
         if (status is AuthStatus.Error) {
-            _uiState.update { it.copy(authStatus = AuthStatus.Unauthenticated, feedbackMessage = null) }
+            _uiState.update {
+                it.copy(
+                    authStatus = AuthStatus.Unauthenticated,
+                    feedbackMessage = null,
+                    feedbackIsError = false
+                )
+            }
         }
     }
 

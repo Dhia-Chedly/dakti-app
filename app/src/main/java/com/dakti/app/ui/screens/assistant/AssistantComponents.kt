@@ -233,12 +233,12 @@ fun AssistantGeneratedMessageCard(
                 ) {
                     Text(text = "WhatsApp")
                 }
-                OutlinedButton(
-                    onClick = onSendViaEmail,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(text = "Email")
-                }
+            }
+            OutlinedButton(
+                onClick = onSendViaEmail,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Send via Email")
             }
         }
     }

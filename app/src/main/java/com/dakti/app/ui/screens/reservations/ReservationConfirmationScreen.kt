@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -18,6 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.reservations.ReservationDraftUi
+import com.dakti.app.ui.components.AppLoadingState
+import com.dakti.app.ui.components.SectionHeader
 
 @Composable
 fun ReservationConfirmationScreen(
@@ -50,15 +50,15 @@ fun ReservationConfirmationScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text(
-                    text = "Review your selected venue slot and confirm to create reservation.",
-                    style = MaterialTheme.typography.bodyMedium
+                SectionHeader(
+                    title = "Reservation Review",
+                    subtitle = "Confirm venue and slot details before creating your booking."
                 )
             }
 
             if (isDraftLoading) {
                 item {
-                    CircularProgressIndicator()
+                    AppLoadingState(message = "Preparing reservation summary...")
                 }
             }
 
@@ -104,6 +104,16 @@ fun ReservationConfirmationScreen(
                             }
                         )
                     }
+                }
+            }
+
+            if (!isDraftLoading && draft == null && errorMessage == null && successMessage == null) {
+                item {
+                    ReservationEmptyState(
+                        message = "Reservation details are not ready yet.",
+                        actionLabel = "Go Back",
+                        onActionClick = onBack
+                    )
                 }
             }
         }

@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.venues.VenueListItemUi
 import com.dakti.app.presentation.venues.VenueTimeSlotUi
+import com.dakti.app.ui.components.AppStateCard
 
 @Composable
 fun SportFilterChip(
@@ -161,29 +162,12 @@ fun VenueEmptyState(
     message: String,
     onRetry: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
-            )
-            OutlinedButton(onClick = onRetry) {
-                Text(text = "Refresh")
-            }
-        }
-    }
+    AppStateCard(
+        title = "No venues found",
+        message = message,
+        actionLabel = "Refresh",
+        onActionClick = onRetry
+    )
 }
 
 @Composable
@@ -191,28 +175,13 @@ fun VenueErrorState(
     message: String,
     onRetry: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer
-            )
-            OutlinedButton(onClick = onRetry) {
-                Text(text = "Try again")
-            }
-        }
-    }
+    AppStateCard(
+        title = "Could not load venues",
+        message = message,
+        actionLabel = "Try again",
+        onActionClick = onRetry,
+        isError = true
+    )
 }
 
 @Composable

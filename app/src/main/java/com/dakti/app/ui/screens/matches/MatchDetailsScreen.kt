@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -22,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.matches.MatchDetailsUi
 import com.dakti.app.presentation.matches.MatchReadinessUi
+import com.dakti.app.ui.components.AppLoadingState
+import com.dakti.app.ui.components.SectionHeader
 import kotlinx.coroutines.launch
 
 @Composable
@@ -70,7 +71,7 @@ fun MatchDetailsScreen(
         ) {
             if (isLoading) {
                 item {
-                    CircularProgressIndicator()
+                    AppLoadingState(message = "Loading match details...")
                 }
             }
 
@@ -92,7 +93,7 @@ fun MatchDetailsScreen(
 
                 if (isMonitoringLoading) {
                     item {
-                        CircularProgressIndicator()
+                        AppLoadingState(message = "Refreshing readiness status...")
                     }
                 }
 
@@ -122,6 +123,13 @@ fun MatchDetailsScreen(
                             Text(text = "Refresh Readiness")
                         }
                     }
+                }
+
+                item {
+                    SectionHeader(
+                        title = "Invite and Communicate",
+                        subtitle = "Manage invitations and share reminders or updates."
+                    )
                 }
 
                 item {
@@ -252,6 +260,13 @@ fun MatchDetailsScreen(
                     ) {
                         Text(text = "Open Assistant Suggestions")
                     }
+                }
+
+                item {
+                    SectionHeader(
+                        title = "External Actions",
+                        subtitle = "Open maps and add this match to calendar."
+                    )
                 }
 
                 item {
