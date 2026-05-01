@@ -1,0 +1,38 @@
+project_id = "dakti"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["dakti://auth/callback"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+
+[functions.gemini-assistant]
+verify_jwt = false
+
+[functions.organize-match]
+verify_jwt = true
+
+[functions.generate-invitation]
+verify_jwt = true
+
+[functions.generate-reminder]
+verify_jwt = true
+
+[functions.monitor-match]
+verify_jwt = true

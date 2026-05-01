@@ -19,7 +19,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.profile.ProfileUiState
 import com.dakti.app.ui.components.AppInlineMessage
 import com.dakti.app.ui.components.AppLoadingState
+import com.dakti.app.ui.components.DaktiHeroScaffold
 import com.dakti.app.ui.components.SectionHeader
 
 @Composable
@@ -44,7 +44,7 @@ fun ProfileScreen(
     onSaveProfile: () -> Unit,
     onLogout: () -> Unit
 ) {
-    Scaffold(
+    DaktiHeroScaffold(
         topBar = {
             CenterAlignedTopAppBar(title = { Text(text = "Profile") })
         }
@@ -58,135 +58,135 @@ fun ProfileScreen(
             ) {
                 AppLoadingState(message = "Loading profile...")
             }
-            return@Scaffold
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Surface(
+        } else {
+            Column(
                 modifier = Modifier
-                    .size(86.dp)
-                    .align(Alignment.CenterHorizontally),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = uiState.displayName.trim().take(1).ifEmpty { "U" }.uppercase(),
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                Surface(
+                    modifier = Modifier
+                        .size(86.dp)
+                        .align(Alignment.CenterHorizontally),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = uiState.displayName.trim().take(1).ifEmpty { "U" }.uppercase(),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+
+                Text(
+                    text = uiState.displayName,
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text(
+                    text = "${uiState.roleLabel} account",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                SectionHeader(
+                    title = "Profile Details",
+                    subtitle = "Keep your contact and display information up to date."
+                )
+
+                OutlinedTextField(
+                    value = uiState.email,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Email") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = uiState.displayName,
+                    onValueChange = onDisplayNameChanged,
+                    readOnly = !uiState.isEditing,
+                    label = { Text("Full name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = uiState.phoneNumber,
+                    onValueChange = onPhoneNumberChanged,
+                    readOnly = !uiState.isEditing,
+                    label = { Text("Phone number") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = uiState.avatarUrl,
+                    onValueChange = onAvatarUrlChanged,
+                    readOnly = !uiState.isEditing,
+                    label = { Text("Avatar URL (optional)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                uiState.errorMessage?.let { message ->
+                    AppInlineMessage(
+                        message = message,
+                        isError = true
                     )
                 }
-            }
 
-            Text(
-                text = uiState.displayName,
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
+                uiState.statusMessage?.let { message ->
+                    AppInlineMessage(
+                        message = message,
+                        isError = false
+                    )
+                }
 
-            Text(
-                text = "${uiState.roleLabel} account",
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            SectionHeader(
-                title = "Profile Details",
-                subtitle = "Keep your contact and display information up to date."
-            )
-
-            OutlinedTextField(
-                value = uiState.email,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Email") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            OutlinedTextField(
-                value = uiState.displayName,
-                onValueChange = onDisplayNameChanged,
-                readOnly = !uiState.isEditing,
-                label = { Text("Full name") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            OutlinedTextField(
-                value = uiState.phoneNumber,
-                onValueChange = onPhoneNumberChanged,
-                readOnly = !uiState.isEditing,
-                label = { Text("Phone number") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            OutlinedTextField(
-                value = uiState.avatarUrl,
-                onValueChange = onAvatarUrlChanged,
-                readOnly = !uiState.isEditing,
-                label = { Text("Avatar URL (optional)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            uiState.errorMessage?.let { message ->
-                AppInlineMessage(
-                    message = message,
-                    isError = true
-                )
-            }
-
-            uiState.statusMessage?.let { message ->
-                AppInlineMessage(
-                    message = message,
-                    isError = false
-                )
-            }
-
-            if (uiState.isEditing) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    TextButton(
-                        onClick = onCancelEditing,
-                        modifier = Modifier.weight(1f)
+                if (uiState.isEditing) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(text = "Cancel")
+                        TextButton(
+                            onClick = onCancelEditing,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(text = "Cancel")
+                        }
+
+                        Button(
+                            onClick = onSaveProfile,
+                            enabled = !uiState.isSaving,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(text = if (uiState.isSaving) "Saving..." else "Save")
+                        }
                     }
-
+                } else {
                     Button(
-                        onClick = onSaveProfile,
-                        enabled = !uiState.isSaving,
-                        modifier = Modifier.weight(1f)
+                        onClick = onStartEditing,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = if (uiState.isSaving) "Saving..." else "Save")
+                        Text(text = "Edit Profile")
                     }
                 }
-            } else {
-                Button(
-                    onClick = onStartEditing,
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                TextButton(
+                    onClick = onLogout,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "Edit Profile")
+                    Text(text = "Logout")
                 }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            TextButton(
-                onClick = onLogout,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "Logout")
             }
         }
     }
 }
+

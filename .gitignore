@@ -13,3 +13,25 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Node / JS local dependencies
+node_modules/
+
+# Kotlin local build cache
+.kotlin/
+
+# Supabase local-only files
+supabase/.temp/
+supabase/.branches/
+supabase/.env
+supabase/.env.*
+
+# Secrets and signing keys
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+
+# Keep shareable env templates
+!supabase/.env.example

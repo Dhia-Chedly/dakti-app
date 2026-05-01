@@ -1,6 +1,7 @@
 package com.dakti.app.presentation.invitations
 
 import com.dakti.app.domain.model.InvitationResponseStatus
+import com.dakti.app.domain.usecase.GenerateInvitationMessageUseCase
 import com.dakti.app.domain.usecase.GetInviteCandidatesUseCase
 import com.dakti.app.domain.usecase.GetMatchDetailsUseCase
 import com.dakti.app.domain.usecase.GetMatchInvitationsUseCase
@@ -8,6 +9,7 @@ import com.dakti.app.domain.usecase.GetPlayerInvitationsUseCase
 import com.dakti.app.domain.usecase.InvitePlayersUseCase
 import com.dakti.app.domain.usecase.RespondToInvitationUseCase
 import com.dakti.app.domain.usecase.ScheduleInvitationReminderUseCase
+import com.dakti.app.testutil.FakeAssistantRepository
 import com.dakti.app.testutil.FakeInvitationRepository
 import com.dakti.app.testutil.FakeMatchRepository
 import com.dakti.app.testutil.FakeNotificationRepository
@@ -31,6 +33,7 @@ class InvitationViewModelTest {
     private val invitationRepository = FakeInvitationRepository()
     private val matchRepository = FakeMatchRepository()
     private val notificationRepository = FakeNotificationRepository()
+    private val assistantRepository = FakeAssistantRepository()
 
     private fun createViewModel(): InvitationViewModel =
         InvitationViewModel(
@@ -40,7 +43,8 @@ class InvitationViewModelTest {
             invitePlayersUseCase = InvitePlayersUseCase(invitationRepository),
             getMatchInvitationsUseCase = GetMatchInvitationsUseCase(invitationRepository),
             getMatchDetailsUseCase = GetMatchDetailsUseCase(matchRepository),
-            scheduleInvitationReminderUseCase = ScheduleInvitationReminderUseCase(notificationRepository)
+            scheduleInvitationReminderUseCase = ScheduleInvitationReminderUseCase(notificationRepository),
+            generateInvitationMessageUseCase = GenerateInvitationMessageUseCase(assistantRepository)
         )
 
     @Test

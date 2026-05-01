@@ -1,8 +1,9 @@
-﻿@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-
 package com.dakti.app.ui.screens.home
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,157 +11,204 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.FactCheck
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.EventAvailable
-import androidx.compose.material.icons.outlined.SportsSoccer
-import androidx.compose.material.icons.outlined.Stadium
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.dakti.app.presentation.home.HomeQuickActionType
 import com.dakti.app.presentation.home.HomeUiState
-import com.dakti.app.ui.components.DashboardActionCard
-import com.dakti.app.ui.components.SectionHeader
+import com.dakti.app.ui.components.DaktiHeroScaffold
+import com.dakti.app.ui.theme.DaktiThemeTokens
 
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
     onBrowseVenues: () -> Unit,
     onCreateMatch: () -> Unit,
-    onMyReservations: () -> Unit,
-    onMyMatches: () -> Unit,
+    onInvitePlayers: () -> Unit,
     onOpenAssistant: () -> Unit,
-    onRefreshMonitoring: () -> Unit
+    onOpenInvitations: () -> Unit,
+    onAcceptInvitation: (String) -> Unit,
+    onDeclineInvitation: (String) -> Unit,
+    onRefresh: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(title = { Text(text = "Home") })
-        }
-    ) { innerPadding ->
-        Column(
+    val dimensions = DaktiThemeTokens.dimensions
+
+    DaktiHeroScaffold { innerPadding ->
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = dimensions.screenHorizontal),
+            verticalArrangement = Arrangement.spacedBy(dimensions.sectionSpacing)
         ) {
-            SectionHeader(
-                title = uiState.greetingTitle,
-                subtitle = uiState.summaryText
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                DashboardActionCard(
-                    title = "Browse Venues",
-                    description = "Find available spaces and check slots.",
-                    icon = Icons.Outlined.Stadium,
-                    onClick = onBrowseVenues,
-                    modifier = Modifier.weight(1f)
-                )
-                DashboardActionCard(
-                    title = "Create Match",
-                    description = "Start planning your next game.",
-                    icon = Icons.Outlined.SportsSoccer,
-                    onClick = onCreateMatch,
-                    modifier = Modifier.weight(1f)
+            item {
+                Spacer(modifier = Modifier.height(4.dp))
+                HomeHeaderRow(
+                    greeting = uiState.header.greeting,
+                    avatarUrl = uiState.header.avatarUrl,
+                    onNotificationClick = {}
                 )
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                DashboardActionCard(
-                    title = "My Reservations",
-                    description = "Track pending and confirmed bookings.",
-                    icon = Icons.Outlined.EventAvailable,
-                    onClick = onMyReservations,
-                    modifier = Modifier.weight(1f)
-                )
-                DashboardActionCard(
-                    title = "My Matches",
-                    description = "Review your scheduled match plans.",
-                    icon = Icons.AutoMirrored.Outlined.FactCheck,
-                    onClick = onMyMatches,
-                    modifier = Modifier.weight(1f)
+            item {
+                HomeNextMatchCard(nextMatch = uiState.nextMatch)
+            }
+
+            item {
+                HomeQuickActionGrid(
+                    actions = uiState.quickActions,
+                    onActionClick = { actionType ->
+                        when (actionType) {
+                            HomeQuickActionType.BOOK_VENUE -> onBrowseVenues()
+                            HomeQuickActionType.CREATE_MATCH -> onCreateMatch()
+                            HomeQuickActionType.INVITE_PLAYERS -> onInvitePlayers()
+                            HomeQuickActionType.ASK_AI -> onOpenAssistant()
+                        }
+                    }
                 )
             }
 
-            DashboardActionCard(
-                title = "Open Assistant",
-                description = "Get help with match formats and planning prompts.",
-                icon = Icons.Outlined.AutoAwesome,
-                onClick = onOpenAssistant,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            if (uiState.readinessAlertCount > 0) {
-                SectionHeader(
-                    title = "Matches Need Attention",
-                    subtitle = "${uiState.readinessAlertCount} active alert(s) from readiness monitoring"
+            item {
+                HomeInsightBanner(
+                    banner = uiState.insightBanner,
+                    onCtaClick = {
+                        if (uiState.nextMatch.hasMatch) {
+                            onInvitePlayers()
+                        } else {
+                            onCreateMatch()
+                        }
+                    }
                 )
-                uiState.readinessHighlights.forEach { item ->
-                    InfoCard(text = item)
+            }
+
+            item {
+                HomeSectionHeader(
+                    title = "Upcoming Invitations",
+                    actionLabel = "See All",
+                    onActionClick = onOpenInvitations
+                )
+            }
+
+            if (uiState.isInvitationsLoading) {
+                items(2) {
+                    InvitationPlaceholderCard()
                 }
-                TextButton(
-                    onClick = onRefreshMonitoring,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = "Refresh Monitoring Alerts")
+            } else if (uiState.upcomingInvitations.isNotEmpty()) {
+                items(uiState.upcomingInvitations, key = { invitation -> invitation.invitationId }) { invitation ->
+                    HomeInvitationCard(
+                        invitation = invitation,
+                        onAccept = { onAcceptInvitation(invitation.invitationId) },
+                        onDecline = { onDeclineInvitation(invitation.invitationId) }
+                    )
                 }
             } else {
-                SectionHeader(
-                    title = "Readiness Monitoring",
-                    subtitle = "No urgent match alerts right now."
+                item {
+                    EmptyStateCard(
+                        message = uiState.invitationsMessage ?: "No pending invitations right now."
+                    )
+                }
+            }
+
+            item {
+                HomeSectionHeader(
+                    title = "Recommended Venues",
+                    actionLabel = "See All",
+                    onActionClick = onBrowseVenues
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            SectionHeader(
-                title = "Upcoming Actions",
-                subtitle = "Shortlist of things to tackle next"
-            )
-            uiState.upcomingActions.forEach { item ->
-                InfoCard(text = item)
+            item {
+                if (uiState.isVenuesLoading) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(2) {
+                            VenuePlaceholderCard()
+                        }
+                    }
+                } else if (uiState.recommendedVenues.isNotEmpty()) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(uiState.recommendedVenues, key = { venue -> venue.id }) { venue ->
+                            HomeVenueCard(venue = venue)
+                        }
+                    }
+                } else {
+                    EmptyStateCard(message = "No venues available yet.")
+                }
             }
 
-            SectionHeader(
-                title = "Recent Activity",
-                subtitle = "Placeholder activity stream for now"
-            )
-            uiState.recentActivity.forEach { item ->
-                InfoCard(text = item)
+            uiState.errorMessage?.takeIf { message -> message.isNotBlank() }?.let { message ->
+                item {
+                    ErrorStateCard(
+                        message = message,
+                        onRetry = onRefresh
+                    )
+                }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
 }
 
 @Composable
-private fun InfoCard(text: String) {
-    Card(
+private fun HomeHeaderRow(
+    greeting: String,
+    avatarUrl: String?,
+    onNotificationClick: () -> Unit
+) {
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(14.dp)
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HomeAvatar(
+                avatarUrl = avatarUrl,
+                modifier = Modifier
+                    .width(46.dp)
+                    .height(46.dp)
+            )
+            Text(
+                text = greeting,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        IconButton(onClick = onNotificationClick) {
+            Box(
+                modifier = Modifier
+                    .width(40.dp)
+                    .height(40.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.NotificationsNone,
+                    contentDescription = "Notifications",
+                    tint = MaterialTheme.colorScheme.tertiary
+                )
+            }
+        }
     }
 }
 

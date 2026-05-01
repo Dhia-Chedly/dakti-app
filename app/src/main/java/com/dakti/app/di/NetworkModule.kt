@@ -1,7 +1,9 @@
 package com.dakti.app.di
 
 import com.dakti.app.data.remote.api.ApiService
+import com.dakti.app.data.remote.supabase.api.SupabaseApiService
 import com.dakti.app.util.AppConstants
+import com.google.gson.Gson
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -38,9 +40,16 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    fun provideGson(): Gson = Gson()
+
+    @Provides
+    @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+        val baseUrl = AppConstants.SUPABASE_URL.let { url ->
+            if (url.endsWith("/")) url else "$url/"
+        }
         return Retrofit.Builder()
-            .baseUrl(AppConstants.API_BASE_URL)
+            .baseUrl(baseUrl)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -50,5 +59,11 @@ object NetworkModule {
     @Singleton
     fun provideApiService(retrofit: Retrofit): ApiService {
         return retrofit.create(ApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSupabaseApiService(retrofit: Retrofit): SupabaseApiService {
+        return retrofit.create(SupabaseApiService::class.java)
     }
 }

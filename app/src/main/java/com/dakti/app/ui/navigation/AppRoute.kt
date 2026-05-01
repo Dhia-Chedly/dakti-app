@@ -4,6 +4,7 @@ sealed class AppRoute(val route: String) {
     data object Splash : AppRoute("splash")
 
     data object AuthGraph : AppRoute("auth_graph")
+    data object Onboarding : AppRoute("onboarding")
     data object Welcome : AppRoute("welcome")
     data object Login : AppRoute("login")
     data object Register : AppRoute("register")

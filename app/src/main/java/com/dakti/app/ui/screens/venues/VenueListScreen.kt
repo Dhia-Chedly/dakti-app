@@ -11,7 +11,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import com.dakti.app.ui.components.DaktiHeroScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -33,7 +33,7 @@ fun VenueListScreen(
     onRetry: () -> Unit,
     onVenueClick: (String) -> Unit
 ) {
-    Scaffold(
+    DaktiHeroScaffold(
         topBar = {
             CenterAlignedTopAppBar(title = { Text(text = "Browse Venues") })
         }
@@ -109,3 +109,4 @@ fun VenueListScreen(
         }
     }
 }
+

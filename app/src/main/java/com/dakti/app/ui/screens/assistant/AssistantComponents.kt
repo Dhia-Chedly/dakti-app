@@ -121,8 +121,7 @@ fun AssistantSuggestionCard(suggestion: AssistantSuggestionUi) {
 
 @Composable
 fun AssistantVenueSuggestionCard(
-    suggestion: AssistantVenueSuggestionUi,
-    onUseThisOption: (String) -> Unit
+    suggestion: AssistantVenueSuggestionUi
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -162,12 +161,6 @@ fun AssistantVenueSuggestionCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
-            }
-            OutlinedButton(
-                onClick = { onUseThisOption(suggestion.timeSlotId) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "Use This Option")
             }
         }
     }
@@ -307,7 +300,7 @@ fun AssistantEmptyState() {
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "I can organize a match from one request, suggest venues/alternative slots, and generate invitation or reminder messages.",
+                text = "I can chat about available venues and answer practical sports questions like gear, warm-up, and preparation.",
                 style = MaterialTheme.typography.bodyMedium
             )
         }

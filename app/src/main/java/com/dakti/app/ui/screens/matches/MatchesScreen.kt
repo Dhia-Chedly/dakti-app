@@ -1,4 +1,4 @@
-﻿@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 package com.dakti.app.ui.screens.matches
 
@@ -17,7 +17,7 @@ import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import com.dakti.app.ui.components.DaktiHeroScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -39,7 +39,7 @@ fun MatchesScreen(
     onRefresh: () -> Unit,
     onOpenMatchDetails: (String) -> Unit
 ) {
-    Scaffold(
+    DaktiHeroScaffold(
         topBar = {
             CenterAlignedTopAppBar(title = { Text(text = "Matches") })
         }
@@ -148,4 +148,5 @@ fun MatchesScreen(
         }
     }
 }
+
 

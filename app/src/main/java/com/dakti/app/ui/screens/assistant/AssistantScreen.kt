@@ -21,24 +21,19 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import com.dakti.app.ui.components.DaktiHeroScaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
-import com.dakti.app.presentation.assistant.AssistantGeneratedMessageUi
 import com.dakti.app.presentation.assistant.AssistantQuickActionUi
 import com.dakti.app.presentation.assistant.AssistantUiState
 import com.dakti.app.ui.components.SectionHeader
-import kotlinx.coroutines.launch
 
 @Composable
 fun AssistantScreen(
@@ -48,20 +43,13 @@ fun AssistantScreen(
     onSendMessage: () -> Unit,
     onPromptSelected: (String) -> Unit,
     onQuickActionSelected: (AssistantQuickActionUi) -> Unit,
-    onUseVenueSuggestion: (messageId: String, suggestionId: String) -> Unit,
-    onConfirmAction: () -> Unit,
-    onCancelAction: () -> Unit,
-    onSendGeneratedViaWhatsApp: (AssistantGeneratedMessageUi) -> String?,
-    onSendGeneratedViaEmail: (AssistantGeneratedMessageUi) -> String?,
     onRetry: () -> Unit,
     onDismissError: () -> Unit,
-    onDismissActionResult: () -> Unit
+    onDismissActionResult: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
-    val clipboardManager = LocalClipboardManager.current
 
-    Scaffold(
+    DaktiHeroScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(text = "Assistant") },
@@ -90,8 +78,8 @@ fun AssistantScreen(
             ) {
                 item {
                     SectionHeader(
-                        title = "AI Organizer Assistant",
-                        subtitle = "Ask naturally, review structured suggestions, then confirm actions."
+                        title = "Dakti Assistant",
+                        subtitle = "Chat about venue availability and practical sports tips."
                     )
                 }
 
@@ -163,40 +151,9 @@ fun AssistantScreen(
                         if (message.venueSuggestions.isNotEmpty()) {
                             message.venueSuggestions.forEach { venueSuggestion ->
                                 AssistantVenueSuggestionCard(
-                                    suggestion = venueSuggestion,
-                                    onUseThisOption = { suggestionId ->
-                                        onUseVenueSuggestion(message.id, suggestionId)
-                                    }
+                                    suggestion = venueSuggestion
                                 )
                             }
-                        }
-
-                        message.generatedMessage?.let { generatedMessage ->
-                            AssistantGeneratedMessageCard(
-                                generated = generatedMessage,
-                                onCopy = {
-                                    clipboardManager.setText(AnnotatedString(generatedMessage.content))
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Message copied.")
-                                    }
-                                },
-                                onSendViaWhatsApp = {
-                                    val resultMessage = onSendGeneratedViaWhatsApp(generatedMessage)
-                                    resultMessage?.let { message ->
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar(message)
-                                        }
-                                    }
-                                },
-                                onSendViaEmail = {
-                                    val resultMessage = onSendGeneratedViaEmail(generatedMessage)
-                                    resultMessage?.let { message ->
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar(message)
-                                        }
-                                    }
-                                }
-                            )
                         }
                     }
                 }
@@ -205,20 +162,6 @@ fun AssistantScreen(
                     item {
                         AssistantLoadingMessage()
                     }
-                }
-            }
-
-            uiState.pendingActionProposal?.let { proposal ->
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    AssistantActionProposalCard(
-                        proposal = proposal,
-                        isExecuting = uiState.isExecutingAction,
-                        onConfirm = onConfirmAction,
-                        onCancel = onCancelAction
-                    )
                 }
             }
 
@@ -309,3 +252,4 @@ fun AssistantScreen(
         }
     }
 }
+

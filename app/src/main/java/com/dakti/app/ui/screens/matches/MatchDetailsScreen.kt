@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
+import com.dakti.app.ui.components.DaktiHeroScaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -51,7 +51,7 @@ fun MatchDetailsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    Scaffold(
+    DaktiHeroScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(text = "Match Details") },
@@ -301,3 +301,4 @@ fun MatchDetailsScreen(
         }
     }
 }
+

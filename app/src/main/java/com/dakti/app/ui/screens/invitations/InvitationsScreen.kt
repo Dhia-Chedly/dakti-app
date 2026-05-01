@@ -10,7 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import com.dakti.app.ui.components.DaktiHeroScaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,7 +32,7 @@ fun InvitationsScreen(
     onRefresh: () -> Unit,
     onBackToHome: () -> Unit
 ) {
-    Scaffold(
+    DaktiHeroScaffold(
         topBar = {
             CenterAlignedTopAppBar(title = { Text(text = "Invitations") })
         }
@@ -110,3 +110,4 @@ fun InvitationsScreen(
         }
     }
 }
+

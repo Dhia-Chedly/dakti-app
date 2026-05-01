@@ -1,21 +1,18 @@
 package com.dakti.app.data.repository
 
-import com.dakti.app.data.local.dao.MatchDao
-import com.dakti.app.data.local.dao.ReservationDao
-import com.dakti.app.data.local.dao.UserDao
-import com.dakti.app.data.local.dao.VenueDao
 import com.dakti.app.data.local.session.SessionLocalDataSource
-import com.dakti.app.data.mapper.toDomain
-import com.dakti.app.data.mapper.toEntity
+import com.dakti.app.data.remote.supabase.SupabaseRemoteDataSource
+import com.dakti.app.data.remote.supabase.model.InvitationRowDto
+import com.dakti.app.data.remote.supabase.model.MatchRowDto
+import com.dakti.app.data.remote.supabase.model.ReservationRowDto
+import com.dakti.app.data.remote.supabase.model.TimeSlotRowDto
+import com.dakti.app.data.remote.supabase.model.VenueRowDto
 import com.dakti.app.domain.model.Match
 import com.dakti.app.domain.model.MatchCreatePayload
 import com.dakti.app.domain.model.MatchReservationContext
 import com.dakti.app.domain.model.MatchStatus
 import com.dakti.app.domain.model.MatchWithContext
 import com.dakti.app.domain.model.MatchWithInvitations
-import com.dakti.app.domain.model.Organizer
-import com.dakti.app.domain.model.User
-import com.dakti.app.domain.model.UserRole
 import com.dakti.app.domain.repository.MatchRepository
 import com.dakti.app.domain.repository.NotificationRepository
 import com.dakti.app.util.Resource
@@ -24,232 +21,276 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 
+@Singleton
 class MatchRepositoryImpl @Inject constructor(
-    private val matchDao: MatchDao,
-    private val reservationDao: ReservationDao,
-    private val venueDao: VenueDao,
-    private val userDao: UserDao,
+    private val supabaseRemoteDataSource: SupabaseRemoteDataSource,
     private val sessionLocalDataSource: SessionLocalDataSource,
     private val notificationRepository: NotificationRepository
 ) : MatchRepository {
 
+    private val matchesCache = MutableStateFlow<Map<String, List<MatchWithContext>>>(emptyMap())
+
     override suspend fun getMyMatches(): Resource<List<MatchWithContext>> {
-        val organizerId = resolveOrganizerId()
-        val organizerName = userDao.getUserById(organizerId)?.displayName
-        val matches = matchDao.getMatchesWithContextByOrganizer(organizerId)
-            .map { relation -> relation.toDomain(organizerName = organizerName) }
-        return Resource.Success(matches)
+        val organizerId = resolveOrganizerId() ?: return Resource.Error("No authenticated user")
+
+        return runCatching {
+            val rows = supabaseRemoteDataSource.getMatchesByOrganizer(organizerId)
+            val hydrated = hydrateMatches(rows)
+            matchesCache.value = matchesCache.value + (organizerId to hydrated)
+            Resource.Success(hydrated)
+        }.getOrElse { error ->
+            Resource.Error(error.message ?: "Could not fetch matches")
+        }
     }
 
     override suspend fun createMatch(payload: MatchCreatePayload): Resource<MatchWithContext> {
-        val organizerId = resolveOrganizerId()
+        val organizerId = resolveOrganizerId() ?: return Resource.Error("No authenticated user")
         if (payload.requiredPlayers < MIN_REQUIRED_PLAYERS) {
             return Resource.Error("A match requires at least $MIN_REQUIRED_PLAYERS players")
         }
 
-        val venue = venueDao.getVenueById(payload.venueId)
-            ?: return Resource.Error("Selected venue is no longer available")
+        return runCatching {
+            val venue = supabaseRemoteDataSource.getVenueById(payload.venueId)
+                ?: return@runCatching Resource.Error("Selected venue is unavailable")
 
-        val reservation = payload.reservationId?.let { reservationId ->
-            val reservationDetails = reservationDao.getReservationWithDetails(reservationId)
-                ?: return Resource.Error("Linked reservation not found")
-            if (reservationDetails.reservation.organizerId != organizerId) {
-                return Resource.Error("You can only create matches from your own reservations")
+            if (!payload.reservationId.isNullOrBlank()) {
+                val reservation = supabaseRemoteDataSource.getReservationById(payload.reservationId)
+                    ?: return@runCatching Resource.Error("Linked reservation not found")
+                if (reservation.organizerId != organizerId) {
+                    return@runCatching Resource.Error("You can only use your own reservation")
+                }
             }
-            if (reservationDetails.reservation.venueId != payload.venueId) {
-                return Resource.Error("Reservation does not belong to selected venue")
-            }
-            reservationDetails
+
+            val created = supabaseRemoteDataSource.createMatch(
+                payload = mapOf(
+                    "id" to UUID.randomUUID().toString(),
+                    "organizer_id" to organizerId,
+                    "venue_id" to payload.venueId,
+                    "reservation_id" to payload.reservationId,
+                    "sport_type" to payload.sportType,
+                    "match_time" to payload.scheduledStartTime.toString(),
+                    "required_players" to payload.requiredPlayers,
+                    "status" to "organizing",
+                    "description" to payload.description
+                )
+            ) ?: return@runCatching Resource.Error("Could not create match")
+
+            notificationRepository.scheduleMatchReminder(
+                matchId = created.id,
+                scheduledStartTime = created.matchTime.toInstantOrNow()
+            )
+            notificationRepository.scheduleMatchReadinessMonitoring(
+                matchId = created.id,
+                scheduledStartTime = created.matchTime.toInstantOrNow()
+            )
+
+            val details = hydrateMatches(listOf(created), mapOf(created.venueId to venue)).first()
+            Resource.Success(details)
+        }.getOrElse { error ->
+            Resource.Error(error.message ?: "Could not create match")
         }
-
-        val now = Instant.now()
-        val match = Match(
-            id = "match-${UUID.randomUUID()}",
-            organizerId = organizerId,
-            venueId = venue.id,
-            reservationId = reservation?.reservation?.id,
-            title = "${payload.sportType} Match",
-            sportType = payload.sportType,
-            scheduledStartTime = payload.scheduledStartTime,
-            requiredPlayers = payload.requiredPlayers,
-            status = MatchStatus.ORGANIZING,
-            description = payload.description?.trim()?.takeIf { value -> value.isNotBlank() },
-            createdAt = now,
-            updatedAt = now
-        )
-
-        matchDao.upsertMatch(match.toEntity())
-        notificationRepository.scheduleMatchReminder(
-            matchId = match.id,
-            scheduledStartTime = match.scheduledStartTime
-        )
-        notificationRepository.scheduleMatchReadinessMonitoring(
-            matchId = match.id,
-            scheduledStartTime = match.scheduledStartTime
-        )
-        return getMatchDetails(match.id)
     }
 
     override suspend fun getMatchDetails(matchId: String): Resource<MatchWithContext> {
-        val relation = matchDao.getMatchWithContextById(matchId)
-            ?: return Resource.Error("Match not found")
-        val organizerName = userDao.getUserById(relation.match.organizerId)?.displayName
-        return Resource.Success(relation.toDomain(organizerName = organizerName))
+        return runCatching {
+            val row = supabaseRemoteDataSource.getMatchById(matchId)
+                ?: return@runCatching Resource.Error("Match not found")
+            val details = hydrateMatches(listOf(row)).firstOrNull()
+                ?: return@runCatching Resource.Error("Match details unavailable")
+            Resource.Success(details)
+        }.getOrElse { error ->
+            Resource.Error(error.message ?: "Could not fetch match details")
+        }
     }
 
     override suspend fun getReservationContextsForCurrentOrganizer(): Resource<List<MatchReservationContext>> {
-        val organizerId = resolveOrganizerId()
-        val reservations = reservationDao.getReservationsWithDetailsByOrganizer(organizerId)
-            .map { relation ->
+        val organizerId = resolveOrganizerId() ?: return Resource.Error("No authenticated user")
+
+        return runCatching {
+            val reservations = supabaseRemoteDataSource.getReservationsByOrganizer(organizerId)
+            val contexts = reservations.mapNotNull { row ->
+                val venue = supabaseRemoteDataSource.getVenueById(row.venueId) ?: return@mapNotNull null
+                val slot = supabaseRemoteDataSource.getTimeSlotById(row.timeSlotId) ?: return@mapNotNull null
                 MatchReservationContext(
-                    reservationId = relation.reservation.id,
-                    venueId = relation.venue.id,
-                    venueName = relation.venue.name,
-                    venueAddress = relation.venue.address,
-                    sportType = relation.venue.sportType,
-                    scheduledStartTime = Instant.ofEpochMilli(relation.timeSlot.startTime),
-                    timeSlotLabel = formatTimeSlot(
-                        startMillis = relation.timeSlot.startTime,
-                        endMillis = relation.timeSlot.endTime
-                    )
+                    reservationId = row.id,
+                    venueId = venue.id,
+                    venueName = venue.name,
+                    venueAddress = venue.address,
+                    sportType = venue.sportType,
+                    scheduledStartTime = slot.startTime.toInstantOrNow(),
+                    timeSlotLabel = slot.toLabel()
                 )
             }
-        return Resource.Success(reservations)
+            Resource.Success(contexts)
+        }.getOrElse { error ->
+            Resource.Error(error.message ?: "Could not fetch reservation contexts")
+        }
     }
 
     override suspend fun updateMatchStatus(
         matchId: String,
         status: MatchStatus
     ): Resource<Unit> {
-        val match = matchDao.getMatchById(matchId)
-            ?: return Resource.Error("Match not found")
-        matchDao.updateMatch(
-            match.copy(
-                status = status,
-                updatedAt = Instant.now().toEpochMilli()
-            )
-        )
+        return runCatching {
+            val existing = supabaseRemoteDataSource.getMatchById(matchId)
+                ?: return@runCatching Resource.Error("Match not found")
 
-        notificationRepository.sendMatchUpdatedNotification(
-            matchId = matchId,
-            updateMessage = "Match status updated to ${status.toDisplayLabel()}."
-        )
+            supabaseRemoteDataSource.updateMatch(
+                matchId = matchId,
+                payload = mapOf(
+                    "status" to status.toRemoteStatus(),
+                    "updated_at" to Instant.now().toString()
+                )
+            )
 
-        if (status == MatchStatus.CANCELLED || status == MatchStatus.COMPLETED) {
-            notificationRepository.cancelMatchReminder(matchId)
-            notificationRepository.cancelMatchReadinessMonitoring(matchId)
-        } else {
-            notificationRepository.scheduleMatchReminder(
+            notificationRepository.sendMatchUpdatedNotification(
                 matchId = matchId,
-                scheduledStartTime = Instant.ofEpochMilli(match.scheduledStartTime)
+                updateMessage = "Match status updated to ${status.toDisplayLabel()}."
             )
-            notificationRepository.scheduleMatchReadinessMonitoring(
-                matchId = matchId,
-                scheduledStartTime = Instant.ofEpochMilli(match.scheduledStartTime)
-            )
+
+            if (status == MatchStatus.CANCELLED || status == MatchStatus.COMPLETED) {
+                notificationRepository.cancelMatchReminder(matchId)
+                notificationRepository.cancelMatchReadinessMonitoring(matchId)
+            } else {
+                val startTime = existing.matchTime.toInstantOrNow()
+                notificationRepository.scheduleMatchReminder(matchId, startTime)
+                notificationRepository.scheduleMatchReadinessMonitoring(matchId, startTime)
+            }
+
+            Resource.Success(Unit)
+        }.getOrElse { error ->
+            Resource.Error(error.message ?: "Could not update match status")
         }
-
-        return Resource.Success(Unit)
     }
 
     override fun observeMatchesByOrganizer(organizerId: String): Flow<List<Match>> =
-        matchDao.observeMatchesByOrganizer(organizerId)
-            .map { entities -> entities.map { entity -> entity.toDomain() } }
+        matchesCache
+            .asStateFlow()
+            .map { cache -> cache[organizerId].orEmpty().map { item -> item.match } }
 
     override fun observeMatchWithInvitations(matchId: String): Flow<MatchWithInvitations?> =
-        matchDao.observeMatchWithInvitations(matchId)
-            .map { relation -> relation?.toDomain() }
+        matchesCache
+            .asStateFlow()
+            .map { cache ->
+                val match = cache.values.flatten().firstOrNull { item -> item.match.id == matchId }?.match
+                match?.let { MatchWithInvitations(match = it, invitations = emptyList()) }
+            }
 
     override suspend fun saveMatch(match: Match): Resource<Match> {
-        matchDao.upsertMatch(match.toEntity())
-        return Resource.Success(match)
+        return runCatching {
+            val payload = mapOf(
+                "id" to match.id,
+                "organizer_id" to match.organizerId,
+                "venue_id" to match.venueId,
+                "reservation_id" to match.reservationId,
+                "sport_type" to match.sportType,
+                "match_time" to match.scheduledStartTime.toString(),
+                "required_players" to match.requiredPlayers,
+                "status" to match.status.toRemoteStatus(),
+                "description" to match.description,
+                "updated_at" to Instant.now().toString()
+            )
+
+            if (supabaseRemoteDataSource.getMatchById(match.id) == null) {
+                supabaseRemoteDataSource.createMatch(payload)
+            } else {
+                supabaseRemoteDataSource.updateMatch(match.id, payload)
+            }
+            Resource.Success(match)
+        }.getOrElse { error ->
+            Resource.Error(error.message ?: "Could not save match")
+        }
     }
 
-    private suspend fun resolveOrganizerId(): String {
-        val sessionUserId = sessionLocalDataSource.authenticatedUserId.value
-        if (sessionUserId.isNullOrBlank()) {
-            ensureDemoOrganizerProfile()
-            return DEMO_ORGANIZER_ID
+    private suspend fun hydrateMatches(
+        rows: List<MatchRowDto>,
+        venueCache: Map<String, VenueRowDto?> = emptyMap()
+    ): List<MatchWithContext> {
+        if (rows.isEmpty()) {
+            return emptyList()
         }
 
-        val user = userDao.getUserById(sessionUserId)
-        if (user == null) {
-            ensureDemoOrganizerProfile()
-            return DEMO_ORGANIZER_ID
+        val venuesById = rows.map { row -> row.venueId }.distinct().associateWith { id ->
+            venueCache[id] ?: supabaseRemoteDataSource.getVenueById(id)
         }
 
-        ensureOrganizerProfileForUser(user.id, user.displayName)
-        return user.id
+        val invitationsByMatch = rows.associate { row ->
+            row.id to supabaseRemoteDataSource.getInvitationsByMatch(row.id)
+        }
+
+        return rows.map { row ->
+            val venue = venuesById[row.venueId]
+            val invitations = invitationsByMatch[row.id].orEmpty()
+            row.toDomainWithContext(
+                venue = venue,
+                invitations = invitations
+            )
+        }
     }
 
-    private suspend fun ensureOrganizerProfileForUser(
-        userId: String,
-        displayName: String
-    ) {
-        val withProfiles = userDao.getUserWithProfiles(userId)
-        if (withProfiles?.organizer != null) {
-            return
-        }
+    private fun MatchRowDto.toDomainWithContext(
+        venue: VenueRowDto?,
+        invitations: List<InvitationRowDto>
+    ): MatchWithContext {
+        val match = Match(
+            id = id,
+            organizerId = organizerId,
+            venueId = venueId,
+            reservationId = reservationId,
+            title = "${sportType} Match",
+            sportType = sportType,
+            scheduledStartTime = matchTime.toInstantOrNow(),
+            requiredPlayers = requiredPlayers,
+            status = status.toMatchStatus(),
+            description = description,
+            createdAt = createdAt.toInstantOrNow(),
+            updatedAt = updatedAt.toInstantOrNow()
+        )
 
-        val now = Instant.now()
-        userDao.upsertOrganizer(
-            Organizer(
-                userId = userId,
-                rating = 0.0,
-                totalHostedMatches = 0,
-                organizationName = "$displayName Hosts",
-                isVerified = false,
-                createdAt = now,
-                updatedAt = now
-            ).toEntity()
+        val confirmed = invitations.count { invitation -> invitation.responseStatus.equals("accepted", ignoreCase = true) }
+        val pending = invitations.count { invitation -> invitation.responseStatus.equals("pending", ignoreCase = true) }
+        val declined = invitations.count { invitation -> invitation.responseStatus.equals("declined", ignoreCase = true) }
+
+        return MatchWithContext(
+            match = match,
+            venueName = venue?.name ?: venueId,
+            venueAddress = venue?.address ?: "",
+            reservationReference = reservationId,
+            organizerName = null,
+            invitedPlayersCount = invitations.size,
+            confirmedPlayersCount = confirmed,
+            pendingPlayersCount = pending,
+            declinedPlayersCount = declined
         )
     }
 
-    private suspend fun ensureDemoOrganizerProfile() {
-        val now = Instant.now()
-        userDao.upsertUser(
-            User(
-                id = DEMO_ORGANIZER_ID,
-                displayName = "Dakti Organizer",
-                email = "organizer@dakti.app",
-                phoneNumber = null,
-                avatarUrl = null,
-                role = UserRole.BOTH,
-                bio = "Host profile seed",
-                createdAt = now,
-                updatedAt = now
-            ).toEntity()
-        )
+    private suspend fun resolveOrganizerId(): String? =
+        sessionLocalDataSource.authenticatedUserId.value?.takeIf { it.isNotBlank() }
 
-        userDao.upsertOrganizer(
-            Organizer(
-                userId = DEMO_ORGANIZER_ID,
-                rating = 4.7,
-                totalHostedMatches = 0,
-                organizationName = "Dakti Hosts",
-                isVerified = true,
-                createdAt = now,
-                updatedAt = now
-            ).toEntity()
-        )
-    }
+    private fun String.toMatchStatus(): MatchStatus =
+        when (lowercase()) {
+            "confirmed" -> MatchStatus.CONFIRMED
+            "cancelled" -> MatchStatus.CANCELLED
+            "completed" -> MatchStatus.COMPLETED
+            else -> MatchStatus.ORGANIZING
+        }
 
-    private fun formatTimeSlot(startMillis: Long, endMillis: Long): String {
-        val zoneId = ZoneId.systemDefault()
-        val start = Instant.ofEpochMilli(startMillis).atZone(zoneId)
-        val end = Instant.ofEpochMilli(endMillis).atZone(zoneId)
-        return "${start.format(slotStartFormatter)} - ${end.format(slotEndFormatter)}"
-    }
-
-    companion object {
-        private const val DEMO_ORGANIZER_ID: String = "organizer-demo"
-        private const val MIN_REQUIRED_PLAYERS: Int = 2
-        private val slotStartFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, d MMM HH:mm")
-        private val slotEndFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-    }
+    private fun MatchStatus.toRemoteStatus(): String =
+        when (this) {
+            MatchStatus.ORGANIZING,
+            MatchStatus.DRAFT,
+            MatchStatus.OPEN -> "organizing"
+            MatchStatus.CONFIRMED,
+            MatchStatus.FULL -> "confirmed"
+            MatchStatus.CANCELLED -> "cancelled"
+            MatchStatus.COMPLETED -> "completed"
+        }
 
     private fun MatchStatus.toDisplayLabel(): String =
         when (this) {
@@ -261,4 +302,20 @@ class MatchRepositoryImpl @Inject constructor(
             MatchStatus.CANCELLED -> "cancelled"
             MatchStatus.COMPLETED -> "completed"
         }
+
+    private fun TimeSlotRowDto.toLabel(): String {
+        val zoneId = ZoneId.systemDefault()
+        val start = startTime.toInstantOrNow().atZone(zoneId)
+        val end = endTime.toInstantOrNow().atZone(zoneId)
+        return "${start.format(slotStartFormatter)} - ${end.format(slotEndFormatter)}"
+    }
+
+    private fun String.toInstantOrNow(): Instant =
+        runCatching { Instant.parse(this) }.getOrElse { Instant.now() }
+
+    private companion object {
+        private const val MIN_REQUIRED_PLAYERS: Int = 2
+        private val slotStartFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, d MMM HH:mm")
+        private val slotEndFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    }
 }

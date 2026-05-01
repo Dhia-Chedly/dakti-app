@@ -230,6 +230,7 @@ class FakeInvitationRepository : InvitationRepository {
     var inviteResult: Resource<Int> = Resource.Success(1)
     var respondResult: Resource<Unit> = Resource.Success(Unit)
     var invitedMatchIds: MutableList<String> = mutableListOf()
+    var respondedInvitations: MutableList<Pair<String, InvitationResponseStatus>> = mutableListOf()
 
     override suspend fun getInvitationsForCurrentPlayer(): Resource<List<InvitationWithContext>> =
         Resource.Success(invitationsForPlayer)
@@ -252,7 +253,10 @@ class FakeInvitationRepository : InvitationRepository {
     override suspend fun respondToInvitation(
         invitationId: String,
         status: InvitationResponseStatus
-    ): Resource<Unit> = respondResult
+    ): Resource<Unit> {
+        respondedInvitations += invitationId to status
+        return respondResult
+    }
 }
 
 class FakeNotificationRepository : NotificationRepository {

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,24 @@ plugins {
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
 }
+
+fun resolveBuildSecret(name: String): String {
+    val gradleValue = (project.findProperty(name) as String?)?.trim().orEmpty()
+    if (gradleValue.isNotBlank()) return gradleValue
+
+    val envValue = System.getenv(name)?.trim().orEmpty()
+    if (envValue.isNotBlank()) return envValue
+
+    val localPropsFile = rootProject.file("local.properties")
+    if (!localPropsFile.exists()) return ""
+
+    val localProps = Properties()
+    localPropsFile.inputStream().use(localProps::load)
+    return localProps.getProperty(name)?.trim().orEmpty()
+}
+
+val supabaseUrl: String = resolveBuildSecret("SUPABASE_URL")
+val supabaseAnonKey: String = resolveBuildSecret("SUPABASE_ANON_KEY")
 
 android {
     namespace = "com.dakti.app"
@@ -18,6 +38,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
     }
 
     buildTypes {
@@ -41,6 +64,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -58,6 +82,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.coil.compose)
 
     implementation(libs.androidx.navigation.compose)
 

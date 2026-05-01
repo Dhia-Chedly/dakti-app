@@ -14,7 +14,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import com.dakti.app.ui.components.DaktiHeroScaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,7 +47,7 @@ fun CreateMatchScreen(
     onCreateClick: () -> Unit,
     onBack: () -> Unit
 ) {
-    Scaffold(
+    DaktiHeroScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(text = "Create Match") },
@@ -213,3 +213,4 @@ fun CreateMatchScreen(
         }
     }
 }
+

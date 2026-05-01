@@ -11,8 +11,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import com.dakti.app.ui.components.DaktiHeroScaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,12 +28,13 @@ import com.dakti.app.ui.components.SectionHeader
 fun InvitePlayersScreen(
     uiState: InvitePlayersUiState,
     onMessageChanged: (String) -> Unit,
+    onGenerateAiMessage: () -> Unit,
     onTogglePlayer: (String) -> Unit,
     onSendInvitations: () -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit
 ) {
-    Scaffold(
+    DaktiHeroScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(text = "Invite Players") },
@@ -95,6 +97,22 @@ fun InvitePlayersScreen(
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2
                 )
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = onGenerateAiMessage,
+                    enabled = !uiState.isGeneratingAiMessage && !uiState.isLoading && !uiState.isSending,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = if (uiState.isGeneratingAiMessage) {
+                            "Generating AI draft..."
+                        } else {
+                            "AI Help: Draft Invitation Message"
+                        }
+                    )
+                }
             }
 
             uiState.successMessage?.takeIf { message -> message.isNotBlank() }?.let { message ->
@@ -185,5 +203,6 @@ fun InvitePlayersScreen(
         }
     }
 }
+
 
 

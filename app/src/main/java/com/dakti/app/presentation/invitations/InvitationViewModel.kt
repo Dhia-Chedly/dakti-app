@@ -2,8 +2,12 @@ package com.dakti.app.presentation.invitations
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dakti.app.domain.model.AssistantContext
+import com.dakti.app.domain.model.AssistantIntent
+import com.dakti.app.domain.model.AssistantStructuredRequest
 import com.dakti.app.domain.model.InvitationResponseStatus
 import com.dakti.app.domain.model.InvitationWithContext
+import com.dakti.app.domain.usecase.GenerateInvitationMessageUseCase
 import com.dakti.app.domain.usecase.GetInviteCandidatesUseCase
 import com.dakti.app.domain.usecase.GetMatchDetailsUseCase
 import com.dakti.app.domain.usecase.GetMatchInvitationsUseCase
@@ -71,6 +75,7 @@ data class InvitePlayersUiState(
     val declinedPlayersCount: Int = 0,
     val remainingSpots: Int = 0,
     val messageInput: String = "",
+    val isGeneratingAiMessage: Boolean = false,
     val players: List<PlayerSelectableItemUi> = emptyList(),
     val existingInvitations: List<MatchInvitationItemUi> = emptyList(),
     val isLoading: Boolean = false,
@@ -104,7 +109,8 @@ class InvitationViewModel @Inject constructor(
     private val invitePlayersUseCase: InvitePlayersUseCase,
     private val getMatchInvitationsUseCase: GetMatchInvitationsUseCase,
     private val getMatchDetailsUseCase: GetMatchDetailsUseCase,
-    private val scheduleInvitationReminderUseCase: ScheduleInvitationReminderUseCase
+    private val scheduleInvitationReminderUseCase: ScheduleInvitationReminderUseCase,
+    private val generateInvitationMessageUseCase: GenerateInvitationMessageUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(InvitationUiState())
@@ -302,7 +308,7 @@ class InvitationViewModel @Inject constructor(
 
     fun sendInvitations() {
         val inviteState = _uiState.value.invitePlayers
-        if (inviteState.isSending) {
+        if (inviteState.isSending || inviteState.isGeneratingAiMessage) {
             return
         }
 
@@ -393,6 +399,86 @@ class InvitationViewModel @Inject constructor(
                     _uiState.update { state ->
                         state.copy(
                             invitePlayers = state.invitePlayers.copy(isSending = true)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun generateAiInvitationMessage() {
+        val inviteState = _uiState.value.invitePlayers
+        val matchId = inviteState.matchId
+        if (matchId.isNullOrBlank()) {
+            _uiState.update { state ->
+                state.copy(
+                    invitePlayers = state.invitePlayers.copy(
+                        errorMessage = "Match context is missing"
+                    )
+                )
+            }
+            return
+        }
+
+        if (inviteState.isGeneratingAiMessage || inviteState.isSending) {
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { state ->
+                state.copy(
+                    invitePlayers = state.invitePlayers.copy(
+                        isGeneratingAiMessage = true,
+                        successMessage = null,
+                        errorMessage = null
+                    )
+                )
+            }
+
+            val request = AssistantStructuredRequest(
+                rawText = "Generate invitation message for this match",
+                intent = AssistantIntent.GENERATE_INVITATION_MESSAGE,
+                sportType = inviteState.sportType.takeIf { value -> value.isNotBlank() },
+                preferredDateTime = null,
+                desiredPlayers = inviteState.requiredPlayers.takeIf { value -> value > 0 },
+                venuePreference = inviteState.venueName.takeIf { value -> value.isNotBlank() },
+                targetMatchId = matchId,
+                context = AssistantContext(
+                    sourceRoute = "invite_players",
+                    matchId = matchId,
+                    reservationId = null,
+                    venueId = null
+                )
+            )
+
+            when (val result = generateInvitationMessageUseCase(request)) {
+                is Resource.Success -> {
+                    _uiState.update { state ->
+                        state.copy(
+                            invitePlayers = state.invitePlayers.copy(
+                                isGeneratingAiMessage = false,
+                                messageInput = result.data.content,
+                                successMessage = "AI draft inserted. You can edit before sending."
+                            )
+                        )
+                    }
+                }
+
+                is Resource.Error -> {
+                    _uiState.update { state ->
+                        state.copy(
+                            invitePlayers = state.invitePlayers.copy(
+                                isGeneratingAiMessage = false,
+                                errorMessage = result.message
+                            )
+                        )
+                    }
+                }
+
+                Resource.Loading -> {
+                    _uiState.update { state ->
+                        state.copy(
+                            invitePlayers = state.invitePlayers.copy(isGeneratingAiMessage = true)
                         )
                     }
                 }

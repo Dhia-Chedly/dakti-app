@@ -1,10 +1,18 @@
 ﻿package com.dakti.app.ui.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -12,7 +20,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -29,6 +39,9 @@ import androidx.navigation.navArgument
 import com.dakti.app.presentation.assistant.AssistantViewModel
 import com.dakti.app.presentation.auth.AuthStatus
 import com.dakti.app.presentation.auth.AuthViewModel
+import com.dakti.app.presentation.auth.LaunchCoordinatorViewModel
+import com.dakti.app.presentation.auth.LaunchDestination
+import com.dakti.app.presentation.auth.OnboardingViewModel
 import com.dakti.app.presentation.home.HomeViewModel
 import com.dakti.app.presentation.invitations.InvitationViewModel
 import com.dakti.app.presentation.integration.ExternalActionViewModel
@@ -38,6 +51,7 @@ import com.dakti.app.presentation.reservations.ReservationViewModel
 import com.dakti.app.presentation.venues.VenueViewModel
 import com.dakti.app.ui.screens.assistant.AssistantScreen
 import com.dakti.app.ui.screens.auth.LoginScreen
+import com.dakti.app.ui.screens.auth.OnboardingScreen
 import com.dakti.app.ui.screens.auth.RegisterScreen
 import com.dakti.app.ui.screens.auth.SplashScreen
 import com.dakti.app.ui.screens.auth.WelcomeScreen
@@ -82,6 +96,7 @@ fun DaktiNavGraph(
     }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         bottomBar = {
             if (showBottomBar) {
                 DaktiBottomNavigation(
@@ -105,24 +120,30 @@ fun DaktiNavGraph(
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(AppRoute.Splash.route) {
-                val viewModel: AuthViewModel = hiltViewModel()
+                val viewModel: LaunchCoordinatorViewModel = hiltViewModel()
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-                LaunchedEffect(state.authStatus) {
-                    when (state.authStatus) {
-                        AuthStatus.Loading -> Unit
-                        is AuthStatus.Authenticated -> {
+                LaunchedEffect(state.isResolving, state.destination) {
+                    if (state.isResolving) {
+                        return@LaunchedEffect
+                    }
+                    when (state.destination) {
+                        LaunchDestination.MainGraph -> {
                             navController.navigate(AppRoute.MainGraph.route) {
                                 popUpTo(AppRoute.Splash.route) { inclusive = true }
                             }
                         }
-
-                        AuthStatus.Unauthenticated,
-                        is AuthStatus.Error -> {
-                            navController.navigate(AppRoute.AuthGraph.route) {
+                        LaunchDestination.Onboarding -> {
+                            navController.navigate(AppRoute.Onboarding.route) {
                                 popUpTo(AppRoute.Splash.route) { inclusive = true }
                             }
                         }
+                        LaunchDestination.Welcome -> {
+                            navController.navigate(AppRoute.Welcome.route) {
+                                popUpTo(AppRoute.Splash.route) { inclusive = true }
+                            }
+                        }
+                        null -> Unit
                     }
                 }
 
@@ -133,6 +154,27 @@ fun DaktiNavGraph(
                 startDestination = AppRoute.Welcome.route,
                 route = AppRoute.AuthGraph.route
             ) {
+                composable(AppRoute.Onboarding.route) {
+                    val viewModel: OnboardingViewModel = hiltViewModel()
+                    OnboardingScreen(
+                        stages = viewModel.stages,
+                        onSkip = {
+                            viewModel.completeOnboarding()
+                            navController.navigate(AppRoute.Welcome.route) {
+                                popUpTo(AppRoute.Onboarding.route) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onComplete = {
+                            viewModel.completeOnboarding()
+                            navController.navigate(AppRoute.Welcome.route) {
+                                popUpTo(AppRoute.Onboarding.route) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    )
+                }
+
                 composable(AppRoute.Welcome.route) {
                     WelcomeScreen(
                         onLoginClick = { navController.navigate(AppRoute.Login.route) },
@@ -206,10 +248,12 @@ fun DaktiNavGraph(
                         uiState = state,
                         onBrowseVenues = { navController.navigate(AppRoute.Venues.route) },
                         onCreateMatch = { navController.navigate(AppRoute.CreateMatch.create(null)) },
-                        onMyReservations = { navController.navigate(AppRoute.MyReservations.route) },
-                        onMyMatches = { navController.navigate(AppRoute.MyMatches.route) },
+                        onInvitePlayers = { navController.navigate(AppRoute.MyMatches.route) },
                         onOpenAssistant = { navController.navigate(AppRoute.Assistant.route) },
-                        onRefreshMonitoring = viewModel::refreshMonitoringHighlights
+                        onOpenInvitations = { navController.navigate(AppRoute.Invitations.route) },
+                        onAcceptInvitation = viewModel::acceptInvitation,
+                        onDeclineInvitation = viewModel::declineInvitation,
+                        onRefresh = viewModel::refreshHomeData
                     )
                 }
 
@@ -252,8 +296,6 @@ fun DaktiNavGraph(
 
                 composable(AppRoute.Assistant.route) {
                     val viewModel: AssistantViewModel = hiltViewModel()
-                    val externalActions: ExternalActionViewModel = hiltViewModel()
-                    val context = LocalContext.current
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
                     AssistantScreen(
@@ -262,25 +304,6 @@ fun DaktiNavGraph(
                         onSendMessage = viewModel::sendCurrentMessage,
                         onPromptSelected = viewModel::sendSuggestedPrompt,
                         onQuickActionSelected = viewModel::sendQuickAction,
-                        onUseVenueSuggestion = viewModel::useVenueSuggestion,
-                        onConfirmAction = viewModel::confirmPendingAction,
-                        onCancelAction = viewModel::cancelPendingAction,
-                        onSendGeneratedViaWhatsApp = { generated ->
-                            val payload = viewModel.buildSharePayload(generated)
-                            if (payload == null) {
-                                "Generated text is empty."
-                            } else {
-                                externalActions.launchWhatsApp(context, payload)
-                            }
-                        },
-                        onSendGeneratedViaEmail = { generated ->
-                            val payload = viewModel.buildEmailPayload(generated)
-                            if (payload == null) {
-                                "Generated text is empty."
-                            } else {
-                                externalActions.launchEmail(context, payload)
-                            }
-                        },
                         onRetry = viewModel::retryLastFailedMessage,
                         onDismissError = viewModel::clearError,
                         onDismissActionResult = viewModel::clearActionResultMessage
@@ -293,8 +316,6 @@ fun DaktiNavGraph(
                 ) { entry ->
                     val matchId = entry.arguments?.getString("matchId").orEmpty()
                     val viewModel: AssistantViewModel = hiltViewModel()
-                    val externalActions: ExternalActionViewModel = hiltViewModel()
-                    val context = LocalContext.current
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
                     LaunchedEffect(matchId) {
@@ -318,25 +339,6 @@ fun DaktiNavGraph(
                         onSendMessage = viewModel::sendCurrentMessage,
                         onPromptSelected = viewModel::sendSuggestedPrompt,
                         onQuickActionSelected = viewModel::sendQuickAction,
-                        onUseVenueSuggestion = viewModel::useVenueSuggestion,
-                        onConfirmAction = viewModel::confirmPendingAction,
-                        onCancelAction = viewModel::cancelPendingAction,
-                        onSendGeneratedViaWhatsApp = { generated ->
-                            val payload = viewModel.buildSharePayload(generated)
-                            if (payload == null) {
-                                "Generated text is empty."
-                            } else {
-                                externalActions.launchWhatsApp(context, payload)
-                            }
-                        },
-                        onSendGeneratedViaEmail = { generated ->
-                            val payload = viewModel.buildEmailPayload(generated)
-                            if (payload == null) {
-                                "Generated text is empty."
-                            } else {
-                                externalActions.launchEmail(context, payload)
-                            }
-                        },
                         onRetry = viewModel::retryLastFailedMessage,
                         onDismissError = viewModel::clearError,
                         onDismissActionResult = viewModel::clearActionResultMessage
@@ -681,6 +683,7 @@ fun DaktiNavGraph(
                     InvitePlayersScreen(
                         uiState = state.invitePlayers,
                         onMessageChanged = viewModel::onInviteMessageChanged,
+                        onGenerateAiMessage = viewModel::generateAiInvitationMessage,
                         onTogglePlayer = viewModel::togglePlayerSelection,
                         onSendInvitations = viewModel::sendInvitations,
                         onRefresh = { viewModel.loadInvitePlayers(matchId) },
@@ -697,22 +700,55 @@ private fun DaktiBottomNavigation(
     currentDestinationRoute: String?,
     onNavigate: (String) -> Unit
 ) {
-    NavigationBar {
-        daktiBottomNavItems.forEach { item ->
-            NavigationBarItem(
-                selected = currentDestinationRoute == item.route,
-                onClick = { onNavigate(item.route) },
-                icon = {
-                    Icon(imageVector = item.icon, contentDescription = item.label)
-                },
-                label = {
+    Surface(
+        tonalElevation = 3.dp,
+        shadowElevation = 4.dp,
+        color = MaterialTheme.colorScheme.surfaceContainerLow
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            daktiBottomNavItems.forEach { item ->
+                val selected = currentDestinationRoute == item.route
+                val containerColor = if (selected) {
+                    MaterialTheme.colorScheme.secondaryContainer
+                } else {
+                    androidx.compose.ui.graphics.Color.Transparent
+                }
+                val contentColor = if (selected) {
+                    MaterialTheme.colorScheme.onSecondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(color = containerColor, shape = CircleShape)
+                        .clickable { onNavigate(item.route) }
+                        .padding(horizontal = 6.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.label,
+                        tint = contentColor,
+                        modifier = Modifier.size(20.dp)
+                    )
                     Text(
                         text = item.label,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = contentColor,
+                        textAlign = TextAlign.Center
                     )
                 }
-            )
+            }
         }
     }
 }

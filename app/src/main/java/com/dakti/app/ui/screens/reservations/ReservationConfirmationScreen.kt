@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Scaffold
+import com.dakti.app.ui.components.DaktiHeroScaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,7 +32,7 @@ fun ReservationConfirmationScreen(
     onHomeClick: () -> Unit,
     onCreateMatchPlaceholder: () -> Unit
 ) {
-    Scaffold(
+    DaktiHeroScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(text = "Reservation Confirmation") },
@@ -119,3 +119,4 @@ fun ReservationConfirmationScreen(
         }
     }
 }
+

@@ -1,19 +1,13 @@
 package com.dakti.app.data.repository
 
-import androidx.room.withTransaction
-import com.dakti.app.data.local.dao.ReservationDao
-import com.dakti.app.data.local.dao.UserDao
-import com.dakti.app.data.local.dao.VenueDao
-import com.dakti.app.data.local.database.AppDatabase
 import com.dakti.app.data.local.session.SessionLocalDataSource
-import com.dakti.app.data.mapper.toDomain
-import com.dakti.app.data.mapper.toEntity
-import com.dakti.app.domain.model.Organizer
+import com.dakti.app.data.remote.supabase.SupabaseRemoteDataSource
+import com.dakti.app.data.remote.supabase.model.ReservationRowDto
+import com.dakti.app.data.remote.supabase.model.TimeSlotRowDto
+import com.dakti.app.data.remote.supabase.model.VenueRowDto
 import com.dakti.app.domain.model.Reservation
 import com.dakti.app.domain.model.ReservationDraft
 import com.dakti.app.domain.model.ReservationStatus
-import com.dakti.app.domain.model.User
-import com.dakti.app.domain.model.UserRole
 import com.dakti.app.domain.repository.ReservationRepository
 import com.dakti.app.util.Resource
 import java.time.Instant
@@ -21,58 +15,77 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 
+@Singleton
 class ReservationRepositoryImpl @Inject constructor(
-    private val reservationDao: ReservationDao,
-    private val venueDao: VenueDao,
-    private val userDao: UserDao,
-    private val sessionLocalDataSource: SessionLocalDataSource,
-    private val appDatabase: AppDatabase
+    private val supabaseRemoteDataSource: SupabaseRemoteDataSource,
+    private val sessionLocalDataSource: SessionLocalDataSource
 ) : ReservationRepository {
+
+    private val reservationsCache = MutableStateFlow<Map<String, List<Reservation>>>(emptyMap())
 
     override suspend fun getReservationDraft(
         venueId: String,
         timeSlotId: String
     ): Resource<ReservationDraft> {
-        val organizerId = resolveOrganizerId()
-        val venue = venueDao.getVenueById(venueId)
-            ?: return Resource.Error("Venue not found")
-        val slot = venueDao.getTimeSlotById(timeSlotId)
-            ?: return Resource.Error("Selected slot not found")
+        return runCatching {
+            val organizerId = resolveOrganizerId() ?: return@runCatching Resource.Error("No authenticated user")
+            val venue = supabaseRemoteDataSource.getVenueById(venueId)
+                ?: return@runCatching Resource.Error("Venue not found")
+            val slot = supabaseRemoteDataSource.getTimeSlotById(timeSlotId)
+                ?: return@runCatching Resource.Error("Selected slot not found")
 
-        if (slot.venueId != venueId) {
-            return Resource.Error("Selected slot does not belong to this venue")
-        }
+            if (slot.venueId != venueId) {
+                return@runCatching Resource.Error("Selected slot does not belong to this venue")
+            }
 
-        return Resource.Success(
-            ReservationDraft(
-                organizerId = organizerId,
-                venueId = venue.id,
-                venueName = venue.name,
-                venueAddress = venue.address,
-                venueSportType = venue.sportType,
-                timeSlotId = slot.id,
-                timeSlotLabel = formatSlot(slot.startTime, slot.endTime),
-                totalPrice = venue.pricePerHour,
-                currency = venue.currency,
-                isSlotAvailable = slot.isAvailable
+            Resource.Success(
+                ReservationDraft(
+                    organizerId = organizerId,
+                    venueId = venue.id,
+                    venueName = venue.name,
+                    venueAddress = venue.address,
+                    venueSportType = venue.sportType,
+                    timeSlotId = slot.id,
+                    timeSlotLabel = slot.toLabel(),
+                    totalPrice = null,
+                    currency = "NGN",
+                    isSlotAvailable = slot.isAvailable
+                )
             )
-        )
+        }.getOrElse { error ->
+            Resource.Error(error.message ?: "Could not prepare reservation")
+        }
     }
 
     override suspend fun getMyReservations(): Resource<List<Reservation>> {
-        val organizerId = resolveOrganizerId()
-        val reservations = reservationDao.getReservationsWithDetailsByOrganizer(organizerId)
-            .map { relation -> relation.toDomain() }
-        return Resource.Success(reservations)
+        val organizerId = resolveOrganizerId() ?: return Resource.Error("No authenticated user")
+
+        return runCatching {
+            val rows = supabaseRemoteDataSource.getReservationsByOrganizer(organizerId)
+            val reservations = hydrateReservations(rows)
+            reservationsCache.value = reservationsCache.value + (organizerId to reservations)
+            Resource.Success(reservations)
+        }.getOrElse { error ->
+            Resource.Error(error.message ?: "Could not fetch reservations")
+        }
     }
 
     override suspend fun getReservationById(reservationId: String): Resource<Reservation> {
-        val reservation = reservationDao.getReservationWithDetails(reservationId)?.toDomain()
-            ?: return Resource.Error("Reservation not found")
-        return Resource.Success(reservation)
+        return runCatching {
+            val row = supabaseRemoteDataSource.getReservationById(reservationId)
+                ?: return@runCatching Resource.Error("Reservation not found")
+            val reservation = hydrateReservations(listOf(row)).firstOrNull()
+                ?: return@runCatching Resource.Error("Reservation details unavailable")
+            Resource.Success(reservation)
+        }.getOrElse { error ->
+            Resource.Error(error.message ?: "Could not fetch reservation")
+        }
     }
 
     override suspend fun createReservation(
@@ -80,166 +93,150 @@ class ReservationRepositoryImpl @Inject constructor(
         timeSlotId: String,
         note: String?
     ): Resource<Reservation> {
-        val organizerId = resolveOrganizerId()
-        val venue = venueDao.getVenueById(venueId)
-            ?: return Resource.Error("Venue not found")
-        val slot = venueDao.getTimeSlotById(timeSlotId)
-            ?: return Resource.Error("Selected slot not found")
+        val organizerId = resolveOrganizerId() ?: return Resource.Error("No authenticated user")
 
-        if (slot.venueId != venueId) {
-            return Resource.Error("Selected slot does not belong to this venue")
-        }
+        return runCatching {
+            val venue = supabaseRemoteDataSource.getVenueById(venueId)
+                ?: return@runCatching Resource.Error("Venue not found")
+            val slot = supabaseRemoteDataSource.getTimeSlotById(timeSlotId)
+                ?: return@runCatching Resource.Error("Selected slot not found")
 
-        if (!slot.isAvailable) {
-            return Resource.Error("This slot has already been reserved")
-        }
-
-        val now = Instant.now()
-        val reservation = Reservation(
-            id = "res-${UUID.randomUUID()}",
-            organizerId = organizerId,
-            venueId = venue.id,
-            timeSlotId = slot.id,
-            venueName = venue.name,
-            timeSlot = formatSlot(slot.startTime, slot.endTime),
-            status = ReservationStatus.CONFIRMED,
-            totalPrice = venue.pricePerHour,
-            currency = venue.currency,
-            note = note,
-            createdAt = now,
-            updatedAt = now
-        )
-
-        return try {
-            appDatabase.withTransaction {
-                val latestSlot = venueDao.getTimeSlotById(timeSlotId)
-                    ?: throw IllegalStateException("Selected slot is no longer available")
-                if (!latestSlot.isAvailable) {
-                    throw IllegalStateException("This slot has already been reserved")
-                }
-
-                reservationDao.upsertReservation(reservation.toEntity())
-                venueDao.updateTimeSlot(latestSlot.copy(isAvailable = false))
+            if (slot.venueId != venueId) {
+                return@runCatching Resource.Error("Selected slot does not belong to this venue")
             }
+            if (!slot.isAvailable) {
+                return@runCatching Resource.Error("This slot has already been reserved")
+            }
+
+            val created = supabaseRemoteDataSource.createReservation(
+                payload = mapOf(
+                    "id" to UUID.randomUUID().toString(),
+                    "organizer_id" to organizerId,
+                    "venue_id" to venueId,
+                    "time_slot_id" to timeSlotId,
+                    "status" to "confirmed",
+                    "notes" to note
+                )
+            ) ?: return@runCatching Resource.Error("Could not create reservation")
+
+            supabaseRemoteDataSource.updateTimeSlot(
+                slotId = timeSlotId,
+                payload = mapOf("is_available" to false)
+            )
+
+            val reservation = Reservation(
+                id = created.id,
+                organizerId = created.organizerId,
+                venueId = created.venueId,
+                timeSlotId = created.timeSlotId,
+                venueName = venue.name,
+                timeSlot = slot.toLabel(),
+                status = created.status.toReservationStatus(),
+                totalPrice = null,
+                currency = "NGN",
+                note = created.notes,
+                createdAt = created.createdAt.toInstantOrNow(),
+                updatedAt = created.createdAt.toInstantOrNow()
+            )
+
+            val current = reservationsCache.value[organizerId].orEmpty()
+            reservationsCache.value = reservationsCache.value + (organizerId to (listOf(reservation) + current))
             Resource.Success(reservation)
-        } catch (exception: IllegalStateException) {
-            Resource.Error(exception.message ?: "Could not reserve the selected slot")
-        } catch (exception: Exception) {
-            Resource.Error("Failed to create reservation")
+        }.getOrElse { error ->
+            Resource.Error(error.message ?: "Could not create reservation")
         }
     }
 
     override fun observeReservationsByOrganizer(organizerId: String): Flow<List<Reservation>> =
-        reservationDao.observeReservationsWithDetailsByOrganizer(organizerId)
-            .map { relations -> relations.map { relation -> relation.toDomain() } }
+        reservationsCache
+            .asStateFlow()
+            .map { cache -> cache[organizerId].orEmpty() }
 
     override suspend fun updateReservationStatus(
         reservationId: String,
         status: ReservationStatus
     ): Resource<Unit> {
-        val reservation = reservationDao.getReservationById(reservationId)
-            ?: return Resource.Error("Reservation not found")
+        return runCatching {
+            val existing = supabaseRemoteDataSource.getReservationById(reservationId)
+                ?: return@runCatching Resource.Error("Reservation not found")
 
-        return try {
-            appDatabase.withTransaction {
-                reservationDao.updateReservation(
-                    reservation.copy(
-                        status = status,
-                        updatedAt = Instant.now().toEpochMilli()
-                    )
+            supabaseRemoteDataSource.updateReservation(
+                reservationId = reservationId,
+                payload = mapOf("status" to status.toRemoteStatus())
+            )
+
+            if (status == ReservationStatus.CANCELLED) {
+                supabaseRemoteDataSource.updateTimeSlot(
+                    slotId = existing.timeSlotId,
+                    payload = mapOf("is_available" to true)
                 )
-
-                if (status == ReservationStatus.CANCELLED) {
-                    val slot = venueDao.getTimeSlotById(reservation.timeSlotId)
-                    if (slot != null) {
-                        venueDao.updateTimeSlot(slot.copy(isAvailable = true))
-                    }
-                }
             }
             Resource.Success(Unit)
-        } catch (exception: Exception) {
-            Resource.Error("Failed to update reservation status")
+        }.getOrElse { error ->
+            Resource.Error(error.message ?: "Could not update reservation")
         }
     }
 
-    private suspend fun resolveOrganizerId(): String {
-        val sessionUserId = sessionLocalDataSource.authenticatedUserId.value
-        if (sessionUserId.isNullOrBlank()) {
-            ensureDemoOrganizerProfile()
-            return DEMO_ORGANIZER_ID
+    private suspend fun hydrateReservations(rows: List<ReservationRowDto>): List<Reservation> {
+        if (rows.isEmpty()) {
+            return emptyList()
         }
 
-        val user = userDao.getUserById(sessionUserId)
-        if (user == null) {
-            ensureDemoOrganizerProfile()
-            return DEMO_ORGANIZER_ID
+        val venueIds = rows.map { it.venueId }.distinct()
+        val slotIds = rows.map { it.timeSlotId }.distinct()
+
+        val venues = venueIds.associateWith { id -> supabaseRemoteDataSource.getVenueById(id) }
+        val slots = slotIds.associateWith { id -> supabaseRemoteDataSource.getTimeSlotById(id) }
+
+        return rows.map { row ->
+            val venue = venues[row.venueId]
+            val slot = slots[row.timeSlotId]
+            Reservation(
+                id = row.id,
+                organizerId = row.organizerId,
+                venueId = row.venueId,
+                timeSlotId = row.timeSlotId,
+                venueName = venue?.name ?: row.venueId,
+                timeSlot = slot?.toLabel() ?: row.timeSlotId,
+                status = row.status.toReservationStatus(),
+                totalPrice = null,
+                currency = "NGN",
+                note = row.notes,
+                createdAt = row.createdAt.toInstantOrNow(),
+                updatedAt = row.createdAt.toInstantOrNow()
+            )
+        }
+    }
+
+    private suspend fun resolveOrganizerId(): String? =
+        sessionLocalDataSource.authenticatedUserId.value?.takeIf { it.isNotBlank() }
+
+    private fun String.toReservationStatus(): ReservationStatus =
+        when (lowercase()) {
+            "pending" -> ReservationStatus.PENDING
+            "cancelled" -> ReservationStatus.CANCELLED
+            else -> ReservationStatus.CONFIRMED
         }
 
-        ensureOrganizerProfileForUser(user.id, user.displayName)
-        return user.id
-    }
-
-    private suspend fun ensureOrganizerProfileForUser(
-        userId: String,
-        displayName: String
-    ) {
-        val withProfiles = userDao.getUserWithProfiles(userId)
-        if (withProfiles?.organizer != null) {
-            return
+    private fun ReservationStatus.toRemoteStatus(): String =
+        when (this) {
+            ReservationStatus.PENDING -> "pending"
+            ReservationStatus.CONFIRMED -> "confirmed"
+            ReservationStatus.CANCELLED -> "cancelled"
+            ReservationStatus.COMPLETED -> "confirmed"
         }
 
-        val now = Instant.now()
-        userDao.upsertOrganizer(
-            Organizer(
-                userId = userId,
-                rating = 0.0,
-                totalHostedMatches = 0,
-                organizationName = "$displayName Hosts",
-                isVerified = false,
-                createdAt = now,
-                updatedAt = now
-            ).toEntity()
-        )
-    }
-
-    private suspend fun ensureDemoOrganizerProfile() {
-        val now = Instant.now()
-        userDao.upsertUser(
-            User(
-                id = DEMO_ORGANIZER_ID,
-                displayName = "Dakti Organizer",
-                email = "organizer@dakti.app",
-                phoneNumber = null,
-                avatarUrl = null,
-                role = UserRole.BOTH,
-                bio = "Host profile seed",
-                createdAt = now,
-                updatedAt = now
-            ).toEntity()
-        )
-
-        userDao.upsertOrganizer(
-            Organizer(
-                userId = DEMO_ORGANIZER_ID,
-                rating = 4.8,
-                totalHostedMatches = 0,
-                organizationName = "Dakti Hosts",
-                isVerified = true,
-                createdAt = now,
-                updatedAt = now
-            ).toEntity()
-        )
-    }
-
-    private fun formatSlot(startMillis: Long, endMillis: Long): String {
+    private fun TimeSlotRowDto.toLabel(): String {
         val zoneId = ZoneId.systemDefault()
-        val start = Instant.ofEpochMilli(startMillis).atZone(zoneId)
-        val end = Instant.ofEpochMilli(endMillis).atZone(zoneId)
+        val start = startTime.toInstantOrNow().atZone(zoneId)
+        val end = endTime.toInstantOrNow().atZone(zoneId)
         return "${start.format(slotStartFormatter)} - ${end.format(slotEndFormatter)}"
     }
 
-    companion object {
-        private const val DEMO_ORGANIZER_ID: String = "organizer-demo"
+    private fun String.toInstantOrNow(): Instant =
+        runCatching { Instant.parse(this) }.getOrElse { Instant.now() }
+
+    private companion object {
         private val slotStartFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, d MMM HH:mm")
         private val slotEndFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
