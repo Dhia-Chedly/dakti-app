@@ -4,6 +4,7 @@ import com.dakti.app.data.local.session.SessionLocalDataSource
 import com.dakti.app.testutil.FakeAuthRepository
 import com.dakti.app.testutil.MainDispatcherRule
 import com.dakti.app.testutil.TestData
+import com.dakti.app.util.AppThemeMode
 import com.dakti.app.util.Resource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -87,11 +88,13 @@ private class FakeSessionLocalDataSource : SessionLocalDataSource {
     private val _accessToken = MutableStateFlow<String?>(null)
     private val _refreshToken = MutableStateFlow<String?>(null)
     private val _onboardingCompleted = MutableStateFlow(false)
+    private val _themeMode = MutableStateFlow(AppThemeMode.LIGHT)
 
     override val authenticatedUserId: StateFlow<String?> = _authenticatedUserId
     override val accessToken: StateFlow<String?> = _accessToken
     override val refreshToken: StateFlow<String?> = _refreshToken
     override val onboardingCompleted: StateFlow<Boolean> = _onboardingCompleted
+    override val themeMode: StateFlow<AppThemeMode> = _themeMode
 
     override fun setAuthenticatedUserId(userId: String) {
         _authenticatedUserId.value = userId
@@ -115,5 +118,9 @@ private class FakeSessionLocalDataSource : SessionLocalDataSource {
 
     override fun setOnboardingCompleted(completed: Boolean) {
         _onboardingCompleted.value = completed
+    }
+
+    override fun setThemeMode(mode: AppThemeMode) {
+        _themeMode.value = mode
     }
 }

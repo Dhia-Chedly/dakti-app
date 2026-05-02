@@ -9,9 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.MaterialTheme
 import com.dakti.app.ui.components.DaktiHeroScaffold
+import com.dakti.app.ui.components.DaktiGlassTopBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,7 +31,7 @@ fun MyMatchesScreen(
 ) {
     DaktiHeroScaffold(
         topBar = {
-            CenterAlignedTopAppBar(title = { Text(text = "My Matches") })
+            DaktiGlassTopBar(title = "My Matches")
         }
     ) { innerPadding ->
         LazyColumn(

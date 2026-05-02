@@ -1,28 +1,13 @@
 ﻿package com.dakti.app.ui.navigation
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -49,6 +34,8 @@ import com.dakti.app.presentation.matches.MatchViewModel
 import com.dakti.app.presentation.profile.ProfileViewModel
 import com.dakti.app.presentation.reservations.ReservationViewModel
 import com.dakti.app.presentation.venues.VenueViewModel
+import com.dakti.app.ui.components.DaktiGlassBottomNav
+import com.dakti.app.ui.components.DaktiGlassBottomNavItem
 import com.dakti.app.ui.screens.assistant.AssistantScreen
 import com.dakti.app.ui.screens.auth.LoginScreen
 import com.dakti.app.ui.screens.auth.OnboardingScreen
@@ -366,6 +353,7 @@ fun DaktiNavGraph(
                         onStartEditing = profileViewModel::startEditing,
                         onCancelEditing = profileViewModel::cancelEditing,
                         onSaveProfile = profileViewModel::saveProfile,
+                        onThemeModeSelected = profileViewModel::onThemeModeSelected,
                         onLogout = profileViewModel::logout
                     )
                 }
@@ -517,6 +505,7 @@ fun DaktiNavGraph(
                         onReservationSelected = viewModel::onReservationContextSelected,
                         onVenueSelected = viewModel::onVenueSelected,
                         onSportTypeChanged = viewModel::onSportTypeChanged,
+                        onLocationChanged = viewModel::onLocationChanged,
                         onScheduledAtChanged = viewModel::onScheduledAtChanged,
                         onRequiredPlayersChanged = viewModel::onRequiredPlayersChanged,
                         onDescriptionChanged = viewModel::onDescriptionChanged,
@@ -700,56 +689,16 @@ private fun DaktiBottomNavigation(
     currentDestinationRoute: String?,
     onNavigate: (String) -> Unit
 ) {
-    Surface(
-        tonalElevation = 3.dp,
-        shadowElevation = 4.dp,
-        color = MaterialTheme.colorScheme.surfaceContainerLow
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            daktiBottomNavItems.forEach { item ->
-                val selected = currentDestinationRoute == item.route
-                val containerColor = if (selected) {
-                    MaterialTheme.colorScheme.secondaryContainer
-                } else {
-                    androidx.compose.ui.graphics.Color.Transparent
-                }
-                val contentColor = if (selected) {
-                    MaterialTheme.colorScheme.onSecondaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(color = containerColor, shape = CircleShape)
-                        .clickable { onNavigate(item.route) }
-                        .padding(horizontal = 6.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = item.label,
-                        tint = contentColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = item.label,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = contentColor,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
-    }
+    DaktiGlassBottomNav(
+        items = daktiBottomNavItems.map { item ->
+            DaktiGlassBottomNavItem(
+                route = item.route,
+                label = item.label,
+                icon = item.icon
+            )
+        },
+        selectedRoute = currentDestinationRoute,
+        onNavigate = onNavigate
+    )
 }
 

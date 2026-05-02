@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -32,18 +33,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.dakti.app.R
 import com.dakti.app.presentation.auth.OnboardingStageKind
+import com.dakti.app.ui.components.DaktiBackgroundScrim
 import com.dakti.app.ui.theme.DaktiThemeTokens
 
 private data class AuthGradientSpec(
-    val top: Color,
-    val middle: Color,
-    val bottom: Color,
     val glow: Color
 )
 
@@ -51,14 +52,8 @@ private data class AuthGradientSpec(
 private fun gradientSpec(index: Int): AuthGradientSpec {
     val hero = DaktiThemeTokens.hero
     val variantShift = (index.mod(4)) * 0.08f
-    val top = lerp(hero.top, hero.middle, 0.14f + variantShift)
-    val middle = lerp(hero.middle, hero.bottom, 0.3f + variantShift)
-    val bottom = lerp(hero.bottom, hero.top, 0.08f + (variantShift / 2f))
     return AuthGradientSpec(
-        top = top,
-        middle = middle,
-        bottom = bottom,
-        glow = hero.glow
+        glow = lerp(hero.glow, hero.onHero, variantShift * 0.45f)
     )
 }
 
@@ -91,27 +86,28 @@ fun SunsetStadiumBackground(
     )
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(spec.top, spec.middle, spec.bottom)
-                )
-            )
+        modifier = modifier.fillMaxSize()
     ) {
+        Image(
+            painter = painterResource(id = R.drawable.sports_bg),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        DaktiBackgroundScrim()
         Box(
             modifier = Modifier
                 .padding(start = (driftX.value + 210f).dp, top = 72.dp)
                 .size(170.dp)
                 .clip(CircleShape)
-                .background(spec.glow.copy(alpha = 0.24f))
+                .background(spec.glow.copy(alpha = 0.2f))
         )
         Box(
             modifier = Modifier
                 .padding(start = 16.dp, top = (driftY.value + 380f).dp)
                 .size(220.dp)
                 .clip(CircleShape)
-                .background(hero.glassSoft)
+                .background(hero.glassSoft.copy(alpha = 0.58f))
         )
         Box(
             modifier = Modifier
@@ -119,7 +115,7 @@ fun SunsetStadiumBackground(
                 .padding(end = 24.dp, bottom = 90.dp)
                 .size(140.dp)
                 .clip(CircleShape)
-                .background(spec.glow.copy(alpha = 0.18f))
+                .background(spec.glow.copy(alpha = 0.14f))
         )
         content()
     }

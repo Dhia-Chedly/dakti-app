@@ -4,6 +4,7 @@ package com.dakti.app.ui.screens.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,10 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -31,7 +33,9 @@ import com.dakti.app.presentation.profile.ProfileUiState
 import com.dakti.app.ui.components.AppInlineMessage
 import com.dakti.app.ui.components.AppLoadingState
 import com.dakti.app.ui.components.DaktiHeroScaffold
+import com.dakti.app.ui.components.DaktiGlassTopBar
 import com.dakti.app.ui.components.SectionHeader
+import com.dakti.app.util.AppThemeMode
 
 @Composable
 fun ProfileScreen(
@@ -42,11 +46,12 @@ fun ProfileScreen(
     onStartEditing: () -> Unit,
     onCancelEditing: () -> Unit,
     onSaveProfile: () -> Unit,
+    onThemeModeSelected: (AppThemeMode) -> Unit,
     onLogout: () -> Unit
 ) {
     DaktiHeroScaffold(
         topBar = {
-            CenterAlignedTopAppBar(title = { Text(text = "Profile") })
+            DaktiGlassTopBar(title = "Profile")
         }
     ) { innerPadding ->
         if (uiState.isLoading) {
@@ -102,37 +107,59 @@ fun ProfileScreen(
                     subtitle = "Keep your contact and display information up to date."
                 )
 
-                OutlinedTextField(
-                    value = uiState.email,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Email") },
-                    modifier = Modifier.fillMaxWidth()
+                ProfileSectionCard {
+                    OutlinedTextField(
+                        value = uiState.email,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Email") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.displayName,
+                        onValueChange = onDisplayNameChanged,
+                        readOnly = !uiState.isEditing,
+                        label = { Text("Full name") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.phoneNumber,
+                        onValueChange = onPhoneNumberChanged,
+                        readOnly = !uiState.isEditing,
+                        label = { Text("Phone number") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.avatarUrl,
+                        onValueChange = onAvatarUrlChanged,
+                        readOnly = !uiState.isEditing,
+                        label = { Text("Avatar URL (optional)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                SectionHeader(
+                    title = "Appearance",
+                    subtitle = "Choose how Dakti should look on this device."
                 )
 
-                OutlinedTextField(
-                    value = uiState.displayName,
-                    onValueChange = onDisplayNameChanged,
-                    readOnly = !uiState.isEditing,
-                    label = { Text("Full name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = uiState.phoneNumber,
-                    onValueChange = onPhoneNumberChanged,
-                    readOnly = !uiState.isEditing,
-                    label = { Text("Phone number") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = uiState.avatarUrl,
-                    onValueChange = onAvatarUrlChanged,
-                    readOnly = !uiState.isEditing,
-                    label = { Text("Avatar URL (optional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                ProfileSectionCard {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AppThemeMode.entries.forEach { mode ->
+                            FilterChip(
+                                selected = uiState.themeMode == mode,
+                                onClick = { onThemeModeSelected(mode) },
+                                label = { Text(text = mode.label()) }
+                            )
+                        }
+                    }
+                }
 
                 uiState.errorMessage?.let { message ->
                     AppInlineMessage(
@@ -187,6 +214,33 @@ fun ProfileScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ProfileSectionCard(
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.92f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            content = content
+        )
+    }
+}
+
+private fun AppThemeMode.label(): String {
+    return when (this) {
+        AppThemeMode.LIGHT -> "Light"
+        AppThemeMode.DARK -> "Dark"
+        AppThemeMode.SYSTEM -> "System"
     }
 }
 

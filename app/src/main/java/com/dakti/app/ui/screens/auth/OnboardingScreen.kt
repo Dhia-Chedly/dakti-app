@@ -21,10 +21,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.testTag
 import com.dakti.app.presentation.auth.OnboardingStage
+import com.dakti.app.ui.components.DaktiGlassTopBar
 import com.dakti.app.ui.theme.DaktiThemeTokens
 import kotlinx.coroutines.launch
 
@@ -35,114 +36,116 @@ fun OnboardingScreen(
     onComplete: () -> Unit
 ) {
     val hero = DaktiThemeTokens.hero
+    val chrome = DaktiThemeTokens.chrome
     val pagerState = rememberPagerState(pageCount = { stages.size })
     val scope = rememberCoroutineScope()
 
     SunsetStadiumBackground(gradientIndex = pagerState.currentPage) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 28.dp)
-        ) {
-            Row(
+        Column(modifier = Modifier.fillMaxSize()) {
+            DaktiGlassTopBar(
+                title = "Onboarding",
+                actions = {
+                    if (pagerState.currentPage < stages.lastIndex) {
+                        TextButton(onClick = onSkip) {
+                            Text(
+                                text = "Skip",
+                                color = chrome.content,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+                }
+            )
+
+            Box(
                 modifier = Modifier
+                    .weight(1f)
                     .fillMaxWidth()
-                    .align(Alignment.TopEnd),
-                horizontalArrangement = Arrangement.End
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
             ) {
-                if (pagerState.currentPage < stages.lastIndex) {
-                    TextButton(onClick = onSkip) {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .fillMaxWidth()
+                        .padding(top = 10.dp, bottom = 130.dp)
+                        .testTag("onboarding_pager")
+                ) { page ->
+                    val stage = stages[page]
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        SportsEmoteRow(
+                            primary = stage.primaryEmote,
+                            secondary = stage.secondaryEmote
+                        )
+                        StageIcon(kind = stage.kind)
                         Text(
-                            text = "Skip",
+                            text = stage.title,
+                            style = MaterialTheme.typography.headlineSmall,
                             color = hero.onHero,
-                            style = MaterialTheme.typography.labelLarge
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = stage.subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = hero.onHeroMuted,
+                            textAlign = TextAlign.Center
+                        )
+                        androidx.compose.material3.Icon(
+                            imageVector = onboardingAccentIcon,
+                            contentDescription = null,
+                            tint = hero.onHero.copy(alpha = 0.85f),
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
-            }
 
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .fillMaxWidth()
-                    .padding(top = 26.dp, bottom = 140.dp)
-                    .testTag("onboarding_pager")
-            ) { page ->
-                val stage = stages[page]
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                        .align(Alignment.BottomCenter),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    SportsEmoteRow(
-                        primary = stage.primaryEmote,
-                        secondary = stage.secondaryEmote
-                    )
-                    StageIcon(kind = stage.kind)
-                    Text(
-                        text = stage.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = hero.onHero,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = stage.subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = hero.onHeroMuted,
-                        textAlign = TextAlign.Center
-                    )
-                    androidx.compose.material3.Icon(
-                        imageVector = onboardingAccentIcon,
-                        contentDescription = null,
-                        tint = hero.onHero.copy(alpha = 0.85f),
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        repeat(stages.size) { index ->
+                            val selected = index == pagerState.currentPage
+                            Box(
+                                modifier = Modifier
+                                    .size(width = if (selected) 28.dp else 8.dp, height = 8.dp)
+                                    .background(
+                                        color = if (selected) hero.onHero else hero.onHero.copy(alpha = 0.38f),
+                                        shape = CircleShape
+                                    )
+                            )
+                        }
+                    }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    repeat(stages.size) { index ->
-                        val selected = index == pagerState.currentPage
-                        Box(
-                            modifier = Modifier
-                                .size(width = if (selected) 28.dp else 8.dp, height = 8.dp)
-                                .background(
-                                    color = if (selected) hero.onHero else hero.onHero.copy(alpha = 0.38f),
-                                    shape = CircleShape
-                                )
+                    Button(
+                        onClick = {
+                            if (pagerState.currentPage == stages.lastIndex) {
+                                onComplete()
+                            } else {
+                                scope.launch {
+                                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (pagerState.currentPage == stages.lastIndex) {
+                                "Get Started"
+                            } else {
+                                "Next"
+                            }
                         )
                     }
-                }
-
-                Button(
-                    onClick = {
-                        if (pagerState.currentPage == stages.lastIndex) {
-                            onComplete()
-                        } else {
-                            scope.launch {
-                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = if (pagerState.currentPage == stages.lastIndex) {
-                            "Get Started"
-                        } else {
-                            "Next"
-                        }
-                    )
                 }
             }
         }

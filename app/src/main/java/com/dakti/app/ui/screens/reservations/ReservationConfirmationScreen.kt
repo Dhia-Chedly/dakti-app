@@ -8,10 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
 import com.dakti.app.ui.components.DaktiHeroScaffold
+import com.dakti.app.ui.components.DaktiGlassTopBar
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -34,13 +33,9 @@ fun ReservationConfirmationScreen(
 ) {
     DaktiHeroScaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(text = "Reservation Confirmation") },
-                navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text(text = "Back")
-                    }
-                }
+            DaktiGlassTopBar(
+                title = "Reservation Confirmation",
+                onBack = onBack
             )
         }
     ) { innerPadding ->

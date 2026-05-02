@@ -2,8 +2,10 @@ package com.dakti.app.presentation.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dakti.app.data.local.session.SessionLocalDataSource
 import com.dakti.app.domain.model.User
 import com.dakti.app.domain.repository.AuthRepository
+import com.dakti.app.util.AppThemeMode
 import com.dakti.app.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -25,12 +27,14 @@ data class ProfileUiState(
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
     val statusMessage: String? = null,
-    val isLoggedOut: Boolean = false
+    val isLoggedOut: Boolean = false,
+    val themeMode: AppThemeMode = AppThemeMode.LIGHT
 )
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val sessionLocalDataSource: SessionLocalDataSource
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -40,6 +44,7 @@ class ProfileViewModel @Inject constructor(
 
     init {
         observeCurrentUser()
+        observeThemeMode()
     }
 
     fun startEditing() {
@@ -156,6 +161,11 @@ class ProfileViewModel @Inject constructor(
         _uiState.update { it.copy(statusMessage = null) }
     }
 
+    fun onThemeModeSelected(mode: AppThemeMode) {
+        sessionLocalDataSource.setThemeMode(mode)
+        _uiState.update { it.copy(themeMode = mode) }
+    }
+
     fun onLogoutHandled() {
         _uiState.update { it.copy(isLoggedOut = false) }
     }
@@ -190,6 +200,14 @@ class ProfileViewModel @Inject constructor(
                         errorMessage = null
                     )
                 }
+            }
+        }
+    }
+
+    private fun observeThemeMode() {
+        viewModelScope.launch {
+            sessionLocalDataSource.themeMode.collect { mode ->
+                _uiState.update { it.copy(themeMode = mode) }
             }
         }
     }

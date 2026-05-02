@@ -17,11 +17,11 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import com.dakti.app.ui.components.DaktiHeroScaffold
+import com.dakti.app.ui.components.DaktiGlassTopBar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -51,15 +51,9 @@ fun AssistantScreen(
 
     DaktiHeroScaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(text = "Assistant") },
-                navigationIcon = {
-                    if (onBack != null) {
-                        TextButton(onClick = onBack) {
-                            Text(text = "Back")
-                        }
-                    }
-                }
+            DaktiGlassTopBar(
+                title = "Assistant",
+                onBack = onBack
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }

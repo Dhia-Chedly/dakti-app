@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import com.dakti.app.ui.components.DaktiHeroScaffold
+import com.dakti.app.ui.components.DaktiGlassTopBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,13 +36,9 @@ fun InvitePlayersScreen(
 ) {
     DaktiHeroScaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(text = "Invite Players") },
-                navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text(text = "Back")
-                    }
-                }
+            DaktiGlassTopBar(
+                title = "Invite Players",
+                onBack = onBack
             )
         }
     ) { innerPadding ->

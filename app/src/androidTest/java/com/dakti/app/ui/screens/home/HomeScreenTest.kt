@@ -1,8 +1,11 @@
 package com.dakti.app.ui.screens.home
 
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.dakti.app.presentation.home.HomeHeaderUi
@@ -43,19 +46,35 @@ class HomeScreenTest {
 
         composeRule.onNodeWithText("Upcoming Invitations").assertIsDisplayed()
         composeRule.onNodeWithText("Recommended Venues").assertIsDisplayed()
-        composeRule.onNodeWithText("Book Venue").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Book Venue").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Invite Players").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Ask AI").assertCountEquals(0)
         composeRule.onNodeWithText("Saturday 4:00 PM").assertIsDisplayed()
+        composeRule.onNodeWithText("Squad Readiness").assertIsDisplayed()
+        composeRule.onAllNodesWithText(
+            "You may need 2 more players for Saturday's match to complete the squad."
+        ).assertCountEquals(0)
     }
 
     @Test
-    fun homeScreen_bookVenueAction_callsCallback() {
-        var called = false
-
+    fun homeScreen_noMatch_showsCreateMatchButtonAndHidesReadiness() {
         composeRule.setContent {
             DaktiTheme {
                 HomeScreen(
-                    uiState = sampleState(),
-                    onBrowseVenues = { called = true },
+                    uiState = sampleState().copy(
+                        nextMatch = HomeNextMatchUi(
+                            hasMatch = false,
+                            dateTimeLabel = "No scheduled match",
+                            venueLabel = "Book a venue and create a match to get started.",
+                            readinessLabel = "0/0 Ready",
+                            readinessProgress = 0f
+                        ),
+                        insightBanner = HomeInsightBannerUi(
+                            message = "No upcoming match yet. Create one and start inviting players.",
+                            ctaLabel = "Start Planning"
+                        )
+                    ),
+                    onBrowseVenues = {},
                     onCreateMatch = {},
                     onInvitePlayers = {},
                     onOpenAssistant = {},
@@ -67,8 +86,44 @@ class HomeScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Book Venue").performClick()
-        assertTrue(called)
+        composeRule.onNodeWithTag("home_next_match_create_button").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Squad Readiness").assertCountEquals(0)
+    }
+
+    @Test
+    fun homeScreen_noMatchCreateButton_callsCreateMatchCallback() {
+        var createMatchCalled = false
+
+        composeRule.setContent {
+            DaktiTheme {
+                HomeScreen(
+                    uiState = sampleState().copy(
+                        nextMatch = HomeNextMatchUi(
+                            hasMatch = false,
+                            dateTimeLabel = "No scheduled match",
+                            venueLabel = "Book a venue and create a match to get started.",
+                            readinessLabel = "0/0 Ready",
+                            readinessProgress = 0f
+                        ),
+                        insightBanner = HomeInsightBannerUi(
+                            message = "No upcoming match yet. Create one and start inviting players.",
+                            ctaLabel = "Start Planning"
+                        )
+                    ),
+                    onBrowseVenues = {},
+                    onCreateMatch = { createMatchCalled = true },
+                    onInvitePlayers = {},
+                    onOpenAssistant = {},
+                    onOpenInvitations = {},
+                    onAcceptInvitation = {},
+                    onDeclineInvitation = {},
+                    onRefresh = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("home_next_match_create_button").performClick()
+        assertTrue(createMatchCalled)
     }
 
     @Test
@@ -91,6 +146,10 @@ class HomeScreenTest {
 
         composeRule.onNodeWithText("Upcoming Invitations").assertIsDisplayed()
         composeRule.onNodeWithText("Recommended Venues").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Book Venue").assertCountEquals(0)
+        composeRule.onAllNodesWithText(
+            "You may need 2 more players for Saturday's match to complete the squad."
+        ).assertCountEquals(0)
     }
 
     private fun sampleState(): HomeUiState = HomeUiState(

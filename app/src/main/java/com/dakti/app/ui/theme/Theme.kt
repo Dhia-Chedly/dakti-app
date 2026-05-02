@@ -1,7 +1,6 @@
 package com.dakti.app.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -121,6 +120,29 @@ data class DaktiHeroColors(
 )
 
 @Immutable
+data class DaktiChromeColors(
+    val container: Color,
+    val border: Color,
+    val content: Color,
+    val selectedPill: Color,
+    val selectedContent: Color
+)
+
+@Immutable
+data class DaktiBackdropScrimColors(
+    val strong: Color,
+    val medium: Color,
+    val light: Color
+)
+
+@Immutable
+data class DaktiChromeMetrics(
+    val cornerRadius: Dp = 20.dp,
+    val horizontalMargin: Dp = 12.dp,
+    val verticalInset: Dp = 8.dp
+)
+
+@Immutable
 data class DaktiSemanticColors(
     val success: Color,
     val warning: Color,
@@ -131,16 +153,33 @@ data class DaktiSemanticColors(
 private val LocalDaktiDimensions = staticCompositionLocalOf { DaktiDimensions() }
 private val LocalDaktiSpacing = staticCompositionLocalOf { DaktiSpacing() }
 private val LocalDaktiElevations = staticCompositionLocalOf { DaktiElevations() }
+private val LocalDaktiChromeMetrics = staticCompositionLocalOf { DaktiChromeMetrics() }
 private val LocalDaktiHeroColors = staticCompositionLocalOf {
     DaktiHeroColors(
-        top = DaktiNavy,
-        middle = DaktiNavyMid,
-        bottom = DaktiNavyAlt,
+        top = Color(0xFFEEF5FF),
+        middle = Color(0xFFE3EEFF),
+        bottom = Color(0xFFD7E7FF),
         glow = DaktiLimeSoft,
-        onHero = Color.White,
-        onHeroMuted = Color.White.copy(alpha = 0.9f),
-        glassStrong = Color.White.copy(alpha = 0.9f),
-        glassSoft = Color.White.copy(alpha = 0.18f)
+        onHero = DaktiOnBackground,
+        onHeroMuted = DaktiOnSurfaceVariant,
+        glassStrong = Color.White.copy(alpha = 0.95f),
+        glassSoft = Color.White.copy(alpha = 0.5f)
+    )
+}
+private val LocalDaktiChromeColors = staticCompositionLocalOf {
+    DaktiChromeColors(
+        container = Color.White.copy(alpha = 0.64f),
+        border = Color.White.copy(alpha = 0.62f),
+        content = DaktiOnBackground,
+        selectedPill = DaktiPrimaryContainer.copy(alpha = 0.9f),
+        selectedContent = DaktiOnPrimaryContainer
+    )
+}
+private val LocalDaktiBackdropScrims = staticCompositionLocalOf {
+    DaktiBackdropScrimColors(
+        strong = Color(0xCCEAF2FF),
+        medium = Color(0x99E2ECFF),
+        light = Color(0x66DAE6FF)
     )
 }
 private val LocalDaktiSemanticColors = staticCompositionLocalOf {
@@ -163,8 +202,17 @@ object DaktiThemeTokens {
     val elevations: DaktiElevations
         @Composable get() = LocalDaktiElevations.current
 
+    val chromeMetrics: DaktiChromeMetrics
+        @Composable get() = LocalDaktiChromeMetrics.current
+
     val hero: DaktiHeroColors
         @Composable get() = LocalDaktiHeroColors.current
+
+    val chrome: DaktiChromeColors
+        @Composable get() = LocalDaktiChromeColors.current
+
+    val backgroundScrim: DaktiBackdropScrimColors
+        @Composable get() = LocalDaktiBackdropScrims.current
 
     val semantic: DaktiSemanticColors
         @Composable get() = LocalDaktiSemanticColors.current
@@ -176,39 +224,78 @@ object DaktiThemeTokens {
 private fun heroColorsFor(darkTheme: Boolean): DaktiHeroColors {
     return if (darkTheme) {
         DaktiHeroColors(
-            top = Color(0xFF050F1E),
-            middle = Color(0xFF0A1B34),
-            bottom = Color(0xFF12335C),
-            glow = DaktiLime,
+            top = Color(0xFF3B5474),
+            middle = Color(0xFF446183),
+            bottom = Color(0xFF4F6F92),
+            glow = DaktiLimeSoft,
             onHero = Color(0xFFEAF2FF),
-            onHeroMuted = Color(0xFFD3E3FF),
-            glassStrong = Color(0xCC112947),
-            glassSoft = Color(0x661D3B62)
+            onHeroMuted = Color(0xFFD9E6F8),
+            glassStrong = Color(0xD9435F82),
+            glassSoft = Color(0x754E6D92)
         )
     } else {
         DaktiHeroColors(
-            top = Color(0xFF0A1B34),
-            middle = Color(0xFF12335C),
-            bottom = Color(0xFF1A4F82),
+            top = Color(0xFFEEF5FF),
+            middle = Color(0xFFE3EEFF),
+            bottom = Color(0xFFD7E7FF),
             glow = DaktiLimeSoft,
-            onHero = Color.White,
-            onHeroMuted = Color.White.copy(alpha = 0.9f),
-            glassStrong = Color.White.copy(alpha = 0.92f),
-            glassSoft = Color.White.copy(alpha = 0.2f)
+            onHero = DaktiOnBackground,
+            onHeroMuted = DaktiOnSurfaceVariant,
+            glassStrong = Color.White.copy(alpha = 0.95f),
+            glassSoft = Color.White.copy(alpha = 0.58f)
+        )
+    }
+}
+
+private fun chromeColorsFor(darkTheme: Boolean): DaktiChromeColors {
+    return if (darkTheme) {
+        DaktiChromeColors(
+            container = Color(0xB237506F),
+            border = Color(0x80BFD7F4),
+            content = Color(0xFFE6F0FF),
+            selectedPill = Color(0xFF9CB9DB),
+            selectedContent = Color(0xFF10263F)
+        )
+    } else {
+        DaktiChromeColors(
+            container = Color.White.copy(alpha = 0.64f),
+            border = Color.White.copy(alpha = 0.62f),
+            content = DaktiOnBackground,
+            selectedPill = DaktiPrimaryContainer.copy(alpha = 0.9f),
+            selectedContent = DaktiOnPrimaryContainer
+        )
+    }
+}
+
+private fun scrimColorsFor(darkTheme: Boolean): DaktiBackdropScrimColors {
+    return if (darkTheme) {
+        DaktiBackdropScrimColors(
+            strong = Color(0xB2233550),
+            medium = Color(0x8A2B3F5E),
+            light = Color(0x66344B6D)
+        )
+    } else {
+        DaktiBackdropScrimColors(
+            strong = Color(0xCCEAF2FF),
+            medium = Color(0x99E2ECFF),
+            light = Color(0x66DAE6FF)
         )
     }
 }
 
 @Composable
 fun DaktiTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     androidx.compose.runtime.CompositionLocalProvider(
         LocalDaktiDimensions provides DaktiDimensions(),
         LocalDaktiSpacing provides DaktiSpacing(),
         LocalDaktiElevations provides DaktiElevations(),
+        LocalDaktiChromeMetrics provides DaktiChromeMetrics(),
         LocalDaktiHeroColors provides heroColorsFor(darkTheme),
+        LocalDaktiChromeColors provides chromeColorsFor(darkTheme),
+        LocalDaktiBackdropScrims provides scrimColorsFor(darkTheme),
         LocalDaktiSemanticColors provides DaktiSemanticColors(
             success = DaktiSuccess,
             warning = DaktiWarning,

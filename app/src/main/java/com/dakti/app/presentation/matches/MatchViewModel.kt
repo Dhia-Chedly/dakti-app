@@ -49,7 +49,8 @@ data class MatchVenueOptionUi(
     val venueId: String,
     val venueName: String,
     val sportType: String,
-    val address: String
+    val address: String,
+    val location: String
 )
 
 data class MatchListItemUi(
@@ -124,9 +125,10 @@ data class MatchReadinessUi(
 data class MatchCreateFormState(
     val selectedReservationId: String? = null,
     val selectedVenueId: String? = null,
+    val selectedLocation: String = "",
     val sportType: String = "",
     val scheduledAtInput: String = "",
-    val requiredPlayersInput: String = "",
+    val requiredPlayersInput: String = "10",
     val description: String = ""
 )
 
@@ -199,8 +201,41 @@ class MatchViewModel @Inject constructor(
 
     fun onSportTypeChanged(value: String) {
         _uiState.update { state ->
+            val selectedVenueId = state.formState.selectedVenueId
+                ?.takeIf { venueId ->
+                    state.venueOptions
+                        .firstOrNull { venue -> venue.venueId == venueId }
+                        ?.sportType == value
+                }
             state.copy(
-                formState = state.formState.copy(sportType = value),
+                formState = state.formState.copy(
+                    selectedReservationId = null,
+                    selectedVenueId = selectedVenueId,
+                    selectedLocation = selectedVenueId?.let { venueId ->
+                        state.venueOptions.firstOrNull { venue -> venue.venueId == venueId }?.location
+                    }.orEmpty(),
+                    sportType = value
+                ),
+                createErrorMessage = null,
+                createSuccessMessage = null
+            )
+        }
+    }
+
+    fun onLocationChanged(value: String) {
+        _uiState.update { state ->
+            val selectedVenueId = state.formState.selectedVenueId
+                ?.takeIf { venueId ->
+                    state.venueOptions
+                        .firstOrNull { venue -> venue.venueId == venueId }
+                        ?.location == value
+                }
+            state.copy(
+                formState = state.formState.copy(
+                    selectedReservationId = null,
+                    selectedLocation = value,
+                    selectedVenueId = selectedVenueId
+                ),
                 createErrorMessage = null,
                 createSuccessMessage = null
             )
@@ -242,7 +277,8 @@ class MatchViewModel @Inject constructor(
             val updated = if (reservationId == null) {
                 state.formState.copy(
                     selectedReservationId = null,
-                    selectedVenueId = null
+                    selectedVenueId = null,
+                    selectedLocation = ""
                 )
             } else {
                 state.formState.copy(
@@ -256,9 +292,13 @@ class MatchViewModel @Inject constructor(
 
     fun onVenueSelected(venueId: String?) {
         _uiState.update { state ->
+            val venue = state.venueOptions.firstOrNull { item -> item.venueId == venueId }
             state.copy(
                 formState = state.formState.copy(
-                    selectedVenueId = venueId
+                    selectedReservationId = null,
+                    selectedVenueId = venueId,
+                    selectedLocation = venue?.location ?: state.formState.selectedLocation,
+                    sportType = venue?.sportType ?: state.formState.sportType
                 )
             )
         }
@@ -582,11 +622,17 @@ class MatchViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = getVenuesUseCase()) {
                 is Resource.Success -> {
-                    _uiState.update {
-                        it.copy(
+                    _uiState.update { state ->
+                        val selectedVenue = state.formState.selectedVenueId?.let { venueId ->
+                            result.data.firstOrNull { item -> item.venue.id == venueId }
+                        }?.toVenueOptionUi()
+                        state.copy(
                             venueOptions = result.data.map { venueWithSlots ->
                                 venueWithSlots.toVenueOptionUi()
-                            }
+                            },
+                            formState = state.formState.copy(
+                                selectedLocation = selectedVenue?.location ?: state.formState.selectedLocation
+                            )
                         )
                     }
                 }
@@ -610,6 +656,7 @@ class MatchViewModel @Inject constructor(
                 formState = state.formState.copy(
                     selectedReservationId = context.reservationId,
                     selectedVenueId = context.venueId,
+                    selectedLocation = locationForVenue(context.venueId),
                     sportType = context.sportType,
                     scheduledAtInput = context.scheduledStartTime
                         .atZone(ZoneId.systemDefault())
@@ -782,8 +829,15 @@ class MatchViewModel @Inject constructor(
             venueId = venue.id,
             venueName = venue.name,
             sportType = venue.sportType,
-            address = venue.address
+            address = venue.address,
+            location = parseLocationFromAddress(venue.address)
         )
+
+    private fun locationForVenue(venueId: String): String =
+        _uiState.value.venueOptions
+            .firstOrNull { option -> option.venueId == venueId }
+            ?.location
+            .orEmpty()
 
     private fun formatDisplayDate(instant: Instant): String =
         instant.atZone(ZoneId.systemDefault()).format(displayFormatter)
@@ -792,5 +846,14 @@ class MatchViewModel @Inject constructor(
         private const val DEFAULT_CALENDAR_DURATION_HOURS: Long = 2
         private val createInputFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
         private val displayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, d MMM yyyy HH:mm")
+
+        private fun parseLocationFromAddress(address: String): String {
+            val cleaned = address.trim()
+            if (cleaned.isBlank()) return "Unknown location"
+            val segments = cleaned.split(",")
+                .map { segment -> segment.trim() }
+                .filter { segment -> segment.isNotBlank() }
+            return segments.lastOrNull() ?: cleaned
+        }
     }
 }

@@ -14,15 +14,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import com.dakti.app.ui.components.DaktiHeroScaffold
+import com.dakti.app.ui.components.DaktiGlassTopBar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,11 +50,9 @@ fun VenueDetailsScreen(
 
     DaktiHeroScaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(text = "Venue Details") },
-                navigationIcon = {
-                    TextButton(onClick = onBack) { Text(text = "Back") }
-                }
+            DaktiGlassTopBar(
+                title = "Venue Details",
+                onBack = onBack
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }

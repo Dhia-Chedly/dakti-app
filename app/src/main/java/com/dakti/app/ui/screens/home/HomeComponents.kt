@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.PersonAddAlt1
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.SportsSoccer
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -38,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,7 +53,10 @@ import com.dakti.app.presentation.home.HomeRecommendedVenueUi
 import com.dakti.app.ui.theme.DaktiThemeTokens
 
 @Composable
-fun HomeNextMatchCard(nextMatch: HomeNextMatchUi) {
+fun HomeNextMatchCard(
+    nextMatch: HomeNextMatchUi,
+    onCreateMatch: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -128,31 +133,42 @@ fun HomeNextMatchCard(nextMatch: HomeNextMatchUi) {
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Squad Readiness",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.tertiary
+                if (nextMatch.hasMatch) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Squad Readiness",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                        Text(
+                            text = nextMatch.readinessLabel,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    LinearProgressIndicator(
+                        progress = { nextMatch.readinessProgress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(CircleShape),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                     )
-                    Text(
-                        text = nextMatch.readinessLabel,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                } else {
+                    Button(
+                        onClick = onCreateMatch,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("home_next_match_create_button")
+                    ) {
+                        Text(text = "Create Match")
+                    }
                 }
-                LinearProgressIndicator(
-                    progress = { nextMatch.readinessProgress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(CircleShape),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                )
             }
         }
     }
@@ -191,13 +207,12 @@ private fun HomeQuickActionCard(
     modifier: Modifier = Modifier
 ) {
     val isPrimary = action.isPrimary
-    val semantic = DaktiThemeTokens.semantic
     Card(
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = if (isPrimary) {
-                MaterialTheme.colorScheme.primary
+                MaterialTheme.colorScheme.primaryContainer
             } else {
                 MaterialTheme.colorScheme.surfaceContainerLow
             }
@@ -218,7 +233,7 @@ private fun HomeQuickActionCard(
                     .size(56.dp)
                     .background(
                         color = when {
-                            isPrimary -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f)
+                            isPrimary -> MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f)
                             action.type == HomeQuickActionType.CREATE_MATCH -> MaterialTheme.colorScheme.secondaryContainer
                             else -> MaterialTheme.colorScheme.primaryContainer
                         },
@@ -230,7 +245,7 @@ private fun HomeQuickActionCard(
                     imageVector = action.icon(),
                     contentDescription = null,
                     tint = when {
-                        isPrimary -> MaterialTheme.colorScheme.onPrimary
+                        isPrimary -> MaterialTheme.colorScheme.onPrimaryContainer
                         action.type == HomeQuickActionType.CREATE_MATCH -> MaterialTheme.colorScheme.secondary
                         else -> MaterialTheme.colorScheme.primary
                     },
@@ -241,7 +256,7 @@ private fun HomeQuickActionCard(
                 text = action.title,
                 style = MaterialTheme.typography.titleSmall,
                 color = if (isPrimary) {
-                    MaterialTheme.colorScheme.onPrimary
+                    MaterialTheme.colorScheme.onPrimaryContainer
                 } else {
                     MaterialTheme.colorScheme.tertiary
                 }
@@ -258,7 +273,7 @@ fun HomeInsightBanner(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -270,12 +285,12 @@ fun HomeInsightBanner(
             Text(
                 text = banner.message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondary
+                color = MaterialTheme.colorScheme.onSecondaryContainer
             )
             Text(
                 text = banner.ctaLabel,
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSecondary,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.clickable(onClick = onCtaClick)
             )
         }

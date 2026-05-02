@@ -15,9 +15,9 @@ import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material3.Card
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.MaterialTheme
 import com.dakti.app.ui.components.DaktiHeroScaffold
+import com.dakti.app.ui.components.DaktiGlassTopBar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -41,7 +41,7 @@ fun MatchesScreen(
 ) {
     DaktiHeroScaffold(
         topBar = {
-            CenterAlignedTopAppBar(title = { Text(text = "Matches") })
+            DaktiGlassTopBar(title = "Matches")
         }
     ) { innerPadding ->
         LazyColumn(

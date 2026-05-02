@@ -1,5 +1,6 @@
 package com.dakti.app.data.local.session
 
+import com.dakti.app.util.AppThemeMode
 import kotlinx.coroutines.flow.StateFlow
 
 interface SessionLocalDataSource {
@@ -7,6 +8,7 @@ interface SessionLocalDataSource {
     val accessToken: StateFlow<String?>
     val refreshToken: StateFlow<String?>
     val onboardingCompleted: StateFlow<Boolean>
+    val themeMode: StateFlow<AppThemeMode>
 
     fun setAuthenticatedUserId(userId: String)
     fun clearAuthenticatedUserId()
@@ -19,4 +21,5 @@ interface SessionLocalDataSource {
     fun clearSession()
 
     fun setOnboardingCompleted(completed: Boolean)
+    fun setThemeMode(mode: AppThemeMode)
 }
