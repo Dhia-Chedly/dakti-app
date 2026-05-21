@@ -23,6 +23,8 @@ import com.dakti.app.presentation.matches.MatchDetailsUi
 import com.dakti.app.presentation.matches.MatchListItemUi
 import com.dakti.app.presentation.matches.MatchReadinessUi
 import com.dakti.app.ui.components.AppStateCard
+import com.dakti.app.ui.components.daktiAccentCard
+import com.dakti.app.ui.components.daktiCardBorder
 
 @Composable
 fun MatchStatusChip(
@@ -89,10 +91,14 @@ fun MatchCard(
     onOpenDetails: (String) -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
+        ),
+        border = daktiCardBorder()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -138,10 +144,14 @@ fun MatchCard(
 @Composable
 fun MatchSummaryCard(details: MatchDetailsUi) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
+        ),
+        border = daktiCardBorder()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -219,10 +229,19 @@ fun MatchReadinessCard(readiness: MatchReadinessUi) {
         MatchReadinessStatus.INSUFFICIENT_PLAYERS -> MaterialTheme.colorScheme.errorContainer
         MatchReadinessStatus.NEEDS_ORGANIZER_ACTION -> MaterialTheme.colorScheme.secondaryContainer
     }
+    val border = if (readiness.status == MatchReadinessStatus.INSUFFICIENT_PLAYERS) {
+        androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.52f))
+    } else {
+        daktiCardBorder(strong = true)
+    }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = containerColor)
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = border
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -254,10 +273,14 @@ fun MatchReadinessCard(readiness: MatchReadinessUi) {
 @Composable
 fun MatchMonitoringActionsCard(readiness: MatchReadinessUi) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
+        ),
+        border = daktiCardBorder()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

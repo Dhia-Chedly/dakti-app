@@ -7,7 +7,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -36,12 +35,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.dakti.app.R
 import com.dakti.app.presentation.auth.OnboardingStageKind
 import com.dakti.app.ui.components.DaktiBackgroundScrim
+import com.dakti.app.ui.components.daktiAccentCard
+import com.dakti.app.ui.components.daktiCardBorder
 import com.dakti.app.ui.theme.DaktiThemeTokens
 
 private data class AuthGradientSpec(
@@ -65,6 +63,7 @@ fun SunsetStadiumBackground(
 ) {
     val spec = gradientSpec(gradientIndex)
     val hero = DaktiThemeTokens.hero
+    val texture = DaktiThemeTokens.backgroundScrim
     val transition = rememberInfiniteTransition(label = "auth_background")
     val driftX = transition.animateFloat(
         initialValue = -20f,
@@ -86,28 +85,24 @@ fun SunsetStadiumBackground(
     )
 
     Box(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
+            .fillMaxSize()
+            .background(texture.base)
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.sports_bg),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
         DaktiBackgroundScrim()
         Box(
             modifier = Modifier
                 .padding(start = (driftX.value + 210f).dp, top = 72.dp)
                 .size(170.dp)
                 .clip(CircleShape)
-                .background(spec.glow.copy(alpha = 0.2f))
+                .background(spec.glow.copy(alpha = 0.16f))
         )
         Box(
             modifier = Modifier
                 .padding(start = 16.dp, top = (driftY.value + 380f).dp)
                 .size(220.dp)
                 .clip(CircleShape)
-                .background(hero.glassSoft.copy(alpha = 0.58f))
+                .background(texture.orbSecondary.copy(alpha = 0.55f))
         )
         Box(
             modifier = Modifier
@@ -115,7 +110,7 @@ fun SunsetStadiumBackground(
                 .padding(end = 24.dp, bottom = 90.dp)
                 .size(140.dp)
                 .clip(CircleShape)
-                .background(spec.glow.copy(alpha = 0.14f))
+                .background(spec.glow.copy(alpha = 0.11f))
         )
         content()
     }
@@ -127,10 +122,12 @@ fun AuthGlassCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val hero = DaktiThemeTokens.hero
+    val shape = RoundedCornerShape(24.dp)
     Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = hero.glassStrong)
+        modifier = modifier.daktiAccentCard(shape = shape),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = hero.glassStrong),
+        border = daktiCardBorder(strong = true)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -145,10 +142,12 @@ fun SportsEmoteBadge(
     modifier: Modifier = Modifier
 ) {
     val hero = DaktiThemeTokens.hero
+    val shape = CircleShape
     Card(
-        modifier = modifier,
-        shape = CircleShape,
-        colors = CardDefaults.cardColors(containerColor = hero.glassSoft)
+        modifier = modifier.daktiAccentCard(shape = shape),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = hero.glassSoft),
+        border = daktiCardBorder()
     ) {
         Text(
             text = text,

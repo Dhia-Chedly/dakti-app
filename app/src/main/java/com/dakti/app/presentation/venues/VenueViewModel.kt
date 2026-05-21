@@ -240,7 +240,7 @@ class VenueViewModel @Inject constructor(
             sportType = venue.sportType,
             locationLabel = venue.locationLabel(),
             address = venue.address,
-            priceLabel = "${venue.currency} ${venue.pricePerHour.toInt()} / hour",
+            priceLabel = venue.priceLabel(),
             availabilityLabel = "${availableSlots.size} available slot(s)",
             nextAvailableSlotLabel = nextAvailable?.toSlotLabel()
         )
@@ -256,9 +256,9 @@ class VenueViewModel @Inject constructor(
             contactPhone = venue.contactPhone,
             latitude = venue.latitude,
             longitude = venue.longitude,
-            description = venue.description ?: "No venue description provided yet.",
+            description = venue.description?.takeIf { value -> value.isNotBlank() } ?: "Not provided",
             imageUrl = venue.imageUrl,
-            priceLabel = "${venue.currency} ${venue.pricePerHour.toInt()} / hour",
+            priceLabel = venue.priceLabel(),
             amenities = venue.amenities,
             timeSlots = slots
                 .sortedBy { slot -> slot.startTime }
@@ -280,8 +280,19 @@ class VenueViewModel @Inject constructor(
     }
 
     private fun com.dakti.app.domain.model.Venue.locationLabel(): String {
-        val statePart = state?.takeIf { it.isNotBlank() }?.let { "$it, " }.orEmpty()
-        return "$city, ${statePart}$country"
+        val values = listOf(
+            city.takeIf { it.isNotBlank() },
+            state?.takeIf { it.isNotBlank() },
+            country.takeIf { it.isNotBlank() }
+        )
+        return values.joinToString(", ").ifBlank { "Not provided" }
+    }
+
+    private fun com.dakti.app.domain.model.Venue.priceLabel(): String {
+        if (currency.isBlank() || pricePerHour <= 0.0) {
+            return "Not provided"
+        }
+        return "${currency} ${pricePerHour.toInt()} / hour"
     }
 
     companion object {

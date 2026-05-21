@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.invitations.InvitationItemUi
 import com.dakti.app.presentation.invitations.PlayerSelectableItemUi
 import com.dakti.app.ui.components.AppStateCard
+import com.dakti.app.ui.components.daktiAccentCard
+import com.dakti.app.ui.components.daktiCardBorder
 
 @Composable
 fun InvitationStatusChip(statusLabel: String) {
@@ -56,8 +58,12 @@ fun InvitationCard(
     onDecline: (String) -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = daktiCardBorder()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -132,8 +138,14 @@ fun PlayerSelectableItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .daktiAccentCard(
+                shape = MaterialTheme.shapes.medium,
+                elevation = if (item.isSelected) 3.dp else 2.dp
+            )
             .clickable(enabled = !item.isAlreadyInvited) { onToggle(item.playerId) },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = daktiCardBorder(strong = item.isSelected)
     ) {
         Row(
             modifier = Modifier
@@ -200,8 +212,12 @@ fun ParticipationSummaryCard(
     remainingSpots: Int
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = daktiCardBorder()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

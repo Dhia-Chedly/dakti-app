@@ -62,4 +62,29 @@ class VenueViewModelTest {
         assertNull(viewModel.uiState.value.selectedSlotId)
         assertTrue(viewModel.uiState.value.selectedVenueDetails?.timeSlots?.first()?.isAvailable == false)
     }
+
+    @Test
+    fun loadVenueDetails_withMissingBackendFields_formatsAsNotProvided() = runTest {
+        val source = TestData.venueWithSlots()
+        venueRepository.venuesWithSlots = listOf(
+            source.copy(
+                venue = source.venue.copy(
+                    city = "",
+                    state = null,
+                    country = "",
+                    pricePerHour = 0.0,
+                    currency = ""
+                )
+            )
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.loadVenueDetails("venue-1")
+        advanceUntilIdle()
+
+        val details = viewModel.uiState.value.selectedVenueDetails
+        assertEquals("Not provided", details?.locationLabel)
+        assertEquals("Not provided", details?.priceLabel)
+    }
 }

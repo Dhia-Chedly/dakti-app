@@ -14,6 +14,7 @@ import com.dakti.app.testutil.FakeInvitationRepository
 import com.dakti.app.testutil.FakeMatchRepository
 import com.dakti.app.testutil.FakeNotificationRepository
 import com.dakti.app.testutil.MainDispatcherRule
+import com.dakti.app.testutil.TestData
 import com.dakti.app.util.Resource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -119,5 +120,26 @@ class InvitationViewModelTest {
         advanceUntilIdle()
 
         assertTrue("inv-1" in viewModel.uiState.value.respondingInvitationIds)
+    }
+
+    @Test
+    fun loadPlayerInvitations_withMissingValues_usesNotProvidedLabels() = runTest {
+        invitationRepository.invitationsForPlayer = listOf(
+            TestData.invitationWithContext().copy(
+                matchTitle = "",
+                sportType = "",
+                venueName = "",
+                organizerName = ""
+            )
+        )
+        val viewModel = createViewModel()
+
+        viewModel.loadPlayerInvitations()
+        advanceUntilIdle()
+
+        val item = viewModel.uiState.value.invitations.first()
+        assertEquals("Not provided", item.title)
+        assertEquals("Not provided - Not provided", item.subtitle)
+        assertEquals("From Not provided", item.organizerLabel)
     }
 }

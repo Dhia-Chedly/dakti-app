@@ -1,6 +1,7 @@
 package com.dakti.app.ui.screens.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +51,8 @@ import com.dakti.app.presentation.home.HomeNextMatchUi
 import com.dakti.app.presentation.home.HomeQuickActionType
 import com.dakti.app.presentation.home.HomeQuickActionUi
 import com.dakti.app.presentation.home.HomeRecommendedVenueUi
+import com.dakti.app.ui.components.daktiAccentCard
+import com.dakti.app.ui.components.daktiCardBorder
 import com.dakti.app.ui.theme.DaktiThemeTokens
 
 @Composable
@@ -58,10 +61,13 @@ fun HomeNextMatchCard(
     onCreateMatch: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.large, elevation = 2.dp),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = daktiCardBorder()
     ) {
         Column(
             modifier = Modifier
@@ -208,7 +214,7 @@ private fun HomeQuickActionCard(
 ) {
     val isPrimary = action.isPrimary
     Card(
-        modifier = modifier,
+        modifier = modifier.daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = if (isPrimary) {
@@ -217,7 +223,8 @@ private fun HomeQuickActionCard(
                 MaterialTheme.colorScheme.surfaceContainerLow
             }
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = daktiCardBorder(strong = isPrimary)
     ) {
         Column(
             modifier = Modifier
@@ -271,10 +278,13 @@ fun HomeInsightBanner(
     onCtaClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 3.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        border = daktiCardBorder(strong = true)
     ) {
         Column(
             modifier = Modifier
@@ -333,10 +343,13 @@ fun HomeInvitationCard(
 ) {
     val semantic = DaktiThemeTokens.semantic
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = daktiCardBorder()
     ) {
         Row(
             modifier = Modifier
@@ -409,10 +422,13 @@ private fun IconActionChip(
 @Composable
 fun HomeVenueCard(venue: HomeRecommendedVenueUi) {
     Card(
-        modifier = Modifier.width(260.dp),
+        modifier = Modifier
+            .width(260.dp)
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = daktiCardBorder()
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             if (venue.imageUrl.isNullOrBlank()) {
@@ -537,8 +553,12 @@ fun VenuePlaceholderCard() {
 @Composable
 fun EmptyStateCard(message: String) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 1.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = daktiCardBorder(alphaMultiplier = 0.85f)
     ) {
         Text(
             text = message,
@@ -555,8 +575,12 @@ fun ErrorStateCard(
     onRetry: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 1.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.52f))
     ) {
         Column(
             modifier = Modifier

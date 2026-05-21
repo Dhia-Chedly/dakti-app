@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import com.dakti.app.ui.components.DaktiHeroScaffold
 import com.dakti.app.ui.components.DaktiGlassTopBar
@@ -26,6 +27,8 @@ import com.dakti.app.presentation.matches.MatchListItemUi
 import com.dakti.app.ui.components.AppLoadingState
 import com.dakti.app.ui.components.DashboardActionCard
 import com.dakti.app.ui.components.SectionHeader
+import com.dakti.app.ui.components.daktiAccentCard
+import com.dakti.app.ui.components.daktiCardBorder
 
 @Composable
 fun MatchesScreen(
@@ -57,7 +60,14 @@ fun MatchesScreen(
             }
 
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 3.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    border = daktiCardBorder(strong = true)
+                ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             text = "Open or draft matches",
@@ -148,5 +158,4 @@ fun MatchesScreen(
         }
     }
 }
-
 

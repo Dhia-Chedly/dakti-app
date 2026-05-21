@@ -9,7 +9,6 @@ import com.dakti.app.domain.model.VenueWithTimeSlots
 import com.dakti.app.domain.repository.VenueRepository
 import com.dakti.app.util.Resource
 import java.time.Instant
-import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -114,10 +113,17 @@ class VenueRepositoryImpl @Inject constructor(
                     "name" to venue.name,
                     "sport_type" to venue.sportType,
                     "address" to venue.address,
+                    "city" to venue.city.ifBlank { null },
+                    "state" to venue.state?.ifBlank { null },
+                    "country" to venue.country.ifBlank { null },
                     "latitude" to venue.latitude,
                     "longitude" to venue.longitude,
                     "contact_number" to venue.contactPhone,
                     "description" to venue.description,
+                    "image_url" to venue.imageUrl,
+                    "price_per_hour" to venue.pricePerHour,
+                    "currency" to venue.currency.ifBlank { null },
+                    "amenities" to venue.amenities,
                     "capacity" to venue.amenities.size.coerceAtLeast(DEFAULT_CAPACITY)
                 )
             )
@@ -147,9 +153,6 @@ class VenueRepositoryImpl @Inject constructor(
     }
 
     private fun VenueRowDto.toDomain(): Venue {
-        val inferredCity = address.substringAfterLast(",", missingDelimiterValue = "").trim()
-            .ifBlank { "Unknown" }
-
         return Venue(
             id = id,
             name = name,
@@ -157,17 +160,17 @@ class VenueRepositoryImpl @Inject constructor(
             description = description,
             address = address,
             contactPhone = contactNumber,
-            imageUrl = null,
-            city = inferredCity,
-            state = null,
-            country = "Nigeria",
+            imageUrl = imageUrl,
+            city = city.orEmpty(),
+            state = state,
+            country = country.orEmpty(),
             latitude = latitude,
             longitude = longitude,
-            pricePerHour = 0.0,
-            currency = "NGN",
-            amenities = listOf("Capacity: $capacity"),
+            pricePerHour = pricePerHour ?: 0.0,
+            currency = currency.orEmpty(),
+            amenities = amenities.orEmpty(),
             createdAt = createdAt.toInstantOrNow(),
-            updatedAt = createdAt.toInstantOrNow()
+            updatedAt = (updatedAt ?: createdAt).toInstantOrNow()
         )
     }
 

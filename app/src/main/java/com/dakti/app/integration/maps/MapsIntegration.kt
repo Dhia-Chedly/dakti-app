@@ -24,7 +24,7 @@ class MapsIntegration @Inject constructor() {
         val latitude = payload.latitude
         val longitude = payload.longitude
         if (latitude != null && longitude != null) {
-            val label = payload.venueName?.ifBlank { "Venue" } ?: "Venue"
+            val label = payload.venueName?.ifBlank { "Not provided" } ?: "Not provided"
             val encodedLabel = Uri.encode(label)
             return Uri.parse("geo:$latitude,$longitude?q=$latitude,$longitude($encodedLabel)")
         }

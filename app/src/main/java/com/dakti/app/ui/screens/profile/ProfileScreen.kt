@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -35,6 +34,8 @@ import com.dakti.app.ui.components.AppLoadingState
 import com.dakti.app.ui.components.DaktiHeroScaffold
 import com.dakti.app.ui.components.DaktiGlassTopBar
 import com.dakti.app.ui.components.SectionHeader
+import com.dakti.app.ui.components.daktiAccentCard
+import com.dakti.app.ui.components.daktiCardBorder
 import com.dakti.app.util.AppThemeMode
 
 @Composable
@@ -75,9 +76,11 @@ fun ProfileScreen(
                 Surface(
                     modifier = Modifier
                         .size(86.dp)
-                        .align(Alignment.CenterHorizontally),
+                        .align(Alignment.CenterHorizontally)
+                        .daktiAccentCard(shape = CircleShape, elevation = 2.dp),
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    border = daktiCardBorder(strong = true)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
@@ -222,9 +225,12 @@ private fun ProfileSectionCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.large, elevation = 2.dp),
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.92f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))
+        border = daktiCardBorder(alphaMultiplier = 0.88f)
     ) {
         Column(
             modifier = Modifier
@@ -243,4 +249,3 @@ private fun AppThemeMode.label(): String {
         AppThemeMode.SYSTEM -> "System"
     }
 }
-

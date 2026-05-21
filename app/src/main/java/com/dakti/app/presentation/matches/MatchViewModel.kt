@@ -725,9 +725,9 @@ class MatchViewModel @Inject constructor(
     private fun MatchWithContext.toListItemUi(): MatchListItemUi =
         MatchListItemUi(
             id = match.id,
-            title = match.title,
+            title = match.title.displayOrNotProvided(),
             sportType = match.sportType,
-            venueName = venueName,
+            venueName = venueName.displayOrNotProvided(),
             scheduledLabel = formatDisplayDate(match.scheduledStartTime),
             status = match.status,
             statusLabel = match.status.toDisplayLabel(),
@@ -742,10 +742,10 @@ class MatchViewModel @Inject constructor(
     private fun MatchWithContext.toDetailsUi(): MatchDetailsUi =
         MatchDetailsUi(
             id = match.id,
-            title = match.title,
+            title = match.title.displayOrNotProvided(),
             sportType = match.sportType,
-            venueName = venueName,
-            venueAddress = venueAddress,
+            venueName = venueName.displayOrNotProvided(),
+            venueAddress = venueAddress.displayOrNotProvided(),
             scheduledStartTime = match.scheduledStartTime,
             scheduledLabel = formatDisplayDate(match.scheduledStartTime),
             status = match.status,
@@ -817,11 +817,11 @@ class MatchViewModel @Inject constructor(
         MatchReservationContextUi(
             reservationId = reservationId,
             venueId = venueId,
-            venueName = venueName,
+            venueName = venueName.displayOrNotProvided(),
             sportType = sportType,
             timeSlotLabel = timeSlotLabel,
             scheduledStartTime = scheduledStartTime,
-            displayLabel = "$venueName - $timeSlotLabel"
+            displayLabel = "${venueName.displayOrNotProvided()} - $timeSlotLabel"
         )
 
     private fun VenueWithTimeSlots.toVenueOptionUi(): MatchVenueOptionUi =
@@ -849,7 +849,7 @@ class MatchViewModel @Inject constructor(
 
         private fun parseLocationFromAddress(address: String): String {
             val cleaned = address.trim()
-            if (cleaned.isBlank()) return "Unknown location"
+            if (cleaned.isBlank()) return "Not provided"
             val segments = cleaned.split(",")
                 .map { segment -> segment.trim() }
                 .filter { segment -> segment.isNotBlank() }
@@ -857,3 +857,6 @@ class MatchViewModel @Inject constructor(
         }
     }
 }
+
+private fun String?.displayOrNotProvided(): String =
+    this?.takeIf { value -> value.isNotBlank() } ?: "Not provided"

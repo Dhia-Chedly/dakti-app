@@ -297,7 +297,7 @@ class HomeViewModel @Inject constructor(
         return HomeNextMatchUi(
             matchId = nextMatch.match.id,
             dateTimeLabel = nextMatch.match.scheduledStartTime.toNextMatchLabel(),
-            venueLabel = nextMatch.venueName,
+            venueLabel = nextMatch.venueName.ifBlank { "Not provided" },
             readinessLabel = "$confirmedPlayers/$requiredPlayers Ready",
             readinessProgress = progress,
             hasMatch = true,
@@ -341,7 +341,7 @@ class HomeViewModel @Inject constructor(
                 HomeInvitationPreviewUi(
                     invitationId = item.invitationId,
                     matchId = item.matchId,
-                    title = item.matchTitle,
+                    title = item.matchTitle.ifBlank { "Not provided" },
                     scheduledLabel = item.scheduledStartTime.toInvitationScheduleLabel(),
                     canRespond = true,
                     isResponding = false
@@ -360,14 +360,21 @@ class HomeViewModel @Inject constructor(
                 HomeRecommendedVenueUi(
                     id = item.venue.id,
                     name = item.venue.name,
-                    address = item.venue.address,
+                    address = item.venue.address.ifBlank { "Not provided" },
                     sportType = item.venue.sportType,
                     imageUrl = item.venue.imageUrl,
                     distanceLabel = null,
                     ratingLabel = null,
-                    priceLabel = "${item.venue.currency} ${item.venue.pricePerHour.roundToInt()}/hr"
+                    priceLabel = item.venue.toHomePriceLabel()
                 )
             }
+    }
+
+    private fun com.dakti.app.domain.model.Venue.toHomePriceLabel(): String? {
+        if (currency.isBlank() || pricePerHour <= 0.0) {
+            return null
+        }
+        return "${currency} ${pricePerHour.roundToInt()}/hr"
     }
 
     private fun String?.toGreeting(): String {

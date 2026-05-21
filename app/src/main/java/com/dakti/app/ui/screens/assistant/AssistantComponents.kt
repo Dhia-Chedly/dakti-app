@@ -27,6 +27,8 @@ import com.dakti.app.presentation.assistant.AssistantMessageUi
 import com.dakti.app.presentation.assistant.AssistantQuickActionUi
 import com.dakti.app.presentation.assistant.AssistantSuggestionUi
 import com.dakti.app.presentation.assistant.AssistantVenueSuggestionUi
+import com.dakti.app.ui.components.daktiAccentCard
+import com.dakti.app.ui.components.daktiCardBorder
 
 @Composable
 fun ChatMessageBubble(message: AssistantMessageUi) {
@@ -92,8 +94,12 @@ fun AssistantQuickActionChip(
 @Composable
 fun AssistantSuggestionCard(suggestion: AssistantSuggestionUi) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = daktiCardBorder()
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -124,8 +130,12 @@ fun AssistantVenueSuggestionCard(
     suggestion: AssistantVenueSuggestionUi
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = daktiCardBorder()
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -174,8 +184,12 @@ fun AssistantGeneratedMessageCard(
     onSendViaEmail: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = daktiCardBorder()
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -245,8 +259,12 @@ fun AssistantActionProposalCard(
     onCancel: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 3.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        border = daktiCardBorder(strong = true)
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -287,8 +305,12 @@ fun AssistantActionProposalCard(
 @Composable
 fun AssistantEmptyState() {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = daktiCardBorder()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -314,7 +336,10 @@ fun AssistantLoadingMessage() {
         horizontalArrangement = Arrangement.Start
     ) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+            modifier = Modifier.daktiAccentCard(shape = MaterialTheme.shapes.small, elevation = 1.dp),
+            shape = MaterialTheme.shapes.small,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+            border = daktiCardBorder(alphaMultiplier = 0.82f)
         ) {
             Text(
                 text = "Assistant is analyzing your request...",

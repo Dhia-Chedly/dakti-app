@@ -1,11 +1,12 @@
-﻿package com.dakti.app.ui.components
+package com.dakti.app.ui.components
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -26,7 +27,8 @@ fun SectionHeader(
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.tertiary
         )
         subtitle?.let {
             Spacer(modifier = Modifier.height(4.dp))
@@ -49,7 +51,10 @@ fun DashboardActionCard(
 ) {
     ElevatedCard(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium)
+            .border(daktiCardBorder(), shape = MaterialTheme.shapes.medium),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
@@ -79,4 +84,3 @@ fun DashboardActionCard(
         }
     }
 }
-

@@ -124,4 +124,23 @@ class MatchViewModelTest {
         assertNotNull(state.selectedMatchReadiness)
         assertEquals("At Risk", state.selectedMatchReadiness?.statusLabel)
     }
+
+    @Test
+    fun loadMatchDetails_withMissingBackendValues_formatsNotProvided() = runTest {
+        matchRepository.detailsById["match-1"] = TestData.matchWithContext().copy(
+            match = TestData.matchWithContext().match.copy(title = ""),
+            venueName = "",
+            venueAddress = ""
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.loadMatchDetails("match-1")
+        advanceUntilIdle()
+
+        val details = viewModel.uiState.value.selectedMatchDetails
+        assertEquals("Not provided", details?.title)
+        assertEquals("Not provided", details?.venueName)
+        assertEquals("Not provided", details?.venueAddress)
+    }
 }

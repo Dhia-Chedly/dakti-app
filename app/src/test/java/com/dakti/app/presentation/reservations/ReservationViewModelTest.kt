@@ -89,4 +89,20 @@ class ReservationViewModelTest {
         assertEquals(1, state.myReservations.size)
         assertFalse(state.draft?.isSlotAvailable ?: true)
     }
+
+    @Test
+    fun loadReservationDraft_withMissingPrice_formatsAsNotProvided() = runTest {
+        reservationRepository.draftResult = Resource.Success(
+            TestData.reservationDraft().copy(
+                totalPrice = null,
+                currency = null
+            )
+        )
+        val viewModel = createViewModel()
+
+        viewModel.loadReservationDraft(venueId = "venue-1", timeSlotId = "slot-1")
+        advanceUntilIdle()
+
+        assertEquals("Not provided", viewModel.uiState.value.draft?.priceLabel)
+    }
 }

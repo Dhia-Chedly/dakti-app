@@ -30,6 +30,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
@@ -58,12 +59,19 @@ fun DaktiGlassContainer(
             .padding(
                 horizontal = chromeMetrics.horizontalMargin,
                 vertical = chromeMetrics.verticalInset
+            )
+            .shadow(
+                elevation = elevations.medium,
+                shape = RoundedCornerShape(chromeMetrics.cornerRadius),
+                clip = false,
+                ambientColor = chrome.shadowAmbient,
+                spotColor = chrome.shadowSpot
             ),
         shape = RoundedCornerShape(chromeMetrics.cornerRadius),
         color = chrome.container,
         border = BorderStroke(1.dp, chrome.border),
-        tonalElevation = elevations.medium,
-        shadowElevation = elevations.medium
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
     ) {
         Box(
             modifier = Modifier

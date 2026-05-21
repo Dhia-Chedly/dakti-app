@@ -65,14 +65,25 @@ data class VenueRowDto(
     @SerializedName("sport_type")
     val sportType: String,
     val address: String,
+    val city: String?,
+    val state: String?,
+    val country: String?,
     val latitude: Double?,
     val longitude: Double?,
     @SerializedName("contact_number")
     val contactNumber: String?,
     val description: String?,
+    @SerializedName("image_url")
+    val imageUrl: String?,
+    @SerializedName("price_per_hour")
+    val pricePerHour: Double?,
+    val currency: String?,
+    val amenities: List<String>?,
     val capacity: Int,
     @SerializedName("created_at")
-    val createdAt: String
+    val createdAt: String,
+    @SerializedName("updated_at")
+    val updatedAt: String?
 )
 
 data class TimeSlotRowDto(
@@ -99,8 +110,13 @@ data class ReservationRowDto(
     val timeSlotId: String,
     val status: String,
     val notes: String?,
+    @SerializedName("total_price")
+    val totalPrice: Double?,
+    val currency: String?,
     @SerializedName("created_at")
-    val createdAt: String
+    val createdAt: String,
+    @SerializedName("updated_at")
+    val updatedAt: String?
 )
 
 data class MatchRowDto(
@@ -117,6 +133,7 @@ data class MatchRowDto(
     val matchTime: String,
     @SerializedName("required_players")
     val requiredPlayers: Int,
+    val title: String?,
     val status: String,
     val description: String?,
     @SerializedName("created_at")

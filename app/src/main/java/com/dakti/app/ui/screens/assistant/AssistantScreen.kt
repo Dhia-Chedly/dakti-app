@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.assistant.AssistantQuickActionUi
 import com.dakti.app.presentation.assistant.AssistantUiState
 import com.dakti.app.ui.components.SectionHeader
+import com.dakti.app.ui.components.daktiAccentCard
+import com.dakti.app.ui.components.daktiCardBorder
 
 @Composable
 fun AssistantScreen(
@@ -111,10 +113,14 @@ fun AssistantScreen(
                         }
                         items(uiState.suggestedPrompts, key = { prompt -> prompt }) { prompt ->
                             Card(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+                                shape = MaterialTheme.shapes.medium,
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                                )
+                                ),
+                                border = daktiCardBorder()
                             ) {
                                 TextButton(
                                     onClick = { onPromptSelected(prompt) },
@@ -163,10 +169,13 @@ fun AssistantScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+                    shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    )
+                    ),
+                    border = daktiCardBorder(strong = true)
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp),
@@ -190,9 +199,15 @@ fun AssistantScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 16.dp)
+                        .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+                    shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
                     )
                 ) {
                     Column(
@@ -246,4 +261,3 @@ fun AssistantScreen(
         }
     }
 }
-

@@ -237,9 +237,9 @@ class InvitationViewModel @Inject constructor(
                 state.copy(
                     invitePlayers = state.invitePlayers.copy(
                         matchId = matchId,
-                        matchTitle = details?.match?.title.orEmpty(),
-                        sportType = details?.match?.sportType.orEmpty(),
-                        venueName = details?.venueName.orEmpty(),
+                        matchTitle = details?.match?.title.displayOrNotProvided(),
+                        sportType = details?.match?.sportType.displayOrNotProvided(),
+                        venueName = details?.venueName.displayOrNotProvided(),
                         scheduledLabel = details?.match?.scheduledStartTime?.formatAsSchedule().orEmpty(),
                         requiredPlayers = details?.match?.requiredPlayers ?: 0,
                         confirmedPlayersCount = details?.confirmedPlayersCount ?: 0,
@@ -249,7 +249,7 @@ class InvitationViewModel @Inject constructor(
                         players = inviteCandidates.map { candidate ->
                             PlayerSelectableItemUi(
                                 playerId = candidate.playerId,
-                                displayName = candidate.displayName,
+                                displayName = candidate.displayName.displayOrNotProvided(),
                                 email = candidate.email,
                                 preferredSport = candidate.preferredSport,
                                 skillLevel = candidate.skillLevel,
@@ -262,7 +262,7 @@ class InvitationViewModel @Inject constructor(
                         existingInvitations = existingInvitations.map { invitation ->
                             MatchInvitationItemUi(
                                 invitationId = invitation.invitationId,
-                                playerName = invitation.playerName,
+                                playerName = invitation.playerName.displayOrNotProvided(),
                                 status = invitation.status,
                                 statusLabel = invitation.status.toDisplayLabel(),
                                 sentAtLabel = invitation.sentAt.formatAsDateTime()
@@ -503,10 +503,10 @@ class InvitationViewModel @Inject constructor(
         InvitationItemUi(
             invitationId = invitationId,
             matchId = matchId,
-            title = matchTitle,
-            subtitle = "$sportType - $venueName",
+            title = matchTitle.displayOrNotProvided(),
+            subtitle = "${sportType.displayOrNotProvided()} - ${venueName.displayOrNotProvided()}",
             scheduledLabel = scheduledStartTime.formatAsSchedule(),
-            organizerLabel = "From $organizerName",
+            organizerLabel = "From ${organizerName.displayOrNotProvided()}",
             status = status,
             statusLabel = status.toDisplayLabel(),
             message = message,
@@ -529,6 +529,9 @@ class InvitationViewModel @Inject constructor(
 
     private fun Instant.formatAsDateTime(): String =
         atZone(ZoneId.systemDefault()).format(dateTimeFormatter)
+
+    private fun String?.displayOrNotProvided(): String =
+        this?.takeIf { value -> value.isNotBlank() } ?: "Not provided"
 
     companion object {
         private val scheduleFormatter: DateTimeFormatter =

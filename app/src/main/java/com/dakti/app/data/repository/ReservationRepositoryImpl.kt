@@ -13,6 +13,7 @@ import com.dakti.app.util.Resource
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.round
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,6 +44,7 @@ class ReservationRepositoryImpl @Inject constructor(
             if (slot.venueId != venueId) {
                 return@runCatching Resource.Error("Selected slot does not belong to this venue")
             }
+            val estimatedTotalPrice = estimateTotalPrice(venue = venue, slot = slot)
 
             Resource.Success(
                 ReservationDraft(
@@ -53,8 +55,8 @@ class ReservationRepositoryImpl @Inject constructor(
                     venueSportType = venue.sportType,
                     timeSlotId = slot.id,
                     timeSlotLabel = slot.toLabel(),
-                    totalPrice = null,
-                    currency = "NGN",
+                    totalPrice = estimatedTotalPrice,
+                    currency = venue.currency,
                     isSlotAvailable = slot.isAvailable
                 )
             )
@@ -107,6 +109,8 @@ class ReservationRepositoryImpl @Inject constructor(
             if (!slot.isAvailable) {
                 return@runCatching Resource.Error("This slot has already been reserved")
             }
+            val totalPrice = estimateTotalPrice(venue = venue, slot = slot)
+            val reservationCurrency = venue.currency.ifBlank { null }
 
             val created = supabaseRemoteDataSource.createReservation(
                 payload = mapOf(
@@ -115,7 +119,9 @@ class ReservationRepositoryImpl @Inject constructor(
                     "venue_id" to venueId,
                     "time_slot_id" to timeSlotId,
                     "status" to "confirmed",
-                    "notes" to note
+                    "notes" to note,
+                    "total_price" to totalPrice,
+                    "currency" to reservationCurrency
                 )
             ) ?: return@runCatching Resource.Error("Could not create reservation")
 
@@ -132,11 +138,11 @@ class ReservationRepositoryImpl @Inject constructor(
                 venueName = venue.name,
                 timeSlot = slot.toLabel(),
                 status = created.status.toReservationStatus(),
-                totalPrice = null,
-                currency = "NGN",
+                totalPrice = created.totalPrice ?: totalPrice,
+                currency = created.currency ?: reservationCurrency,
                 note = created.notes,
                 createdAt = created.createdAt.toInstantOrNow(),
-                updatedAt = created.createdAt.toInstantOrNow()
+                updatedAt = (created.updatedAt ?: created.createdAt).toInstantOrNow()
             )
 
             val current = reservationsCache.value[organizerId].orEmpty()
@@ -162,7 +168,10 @@ class ReservationRepositoryImpl @Inject constructor(
 
             supabaseRemoteDataSource.updateReservation(
                 reservationId = reservationId,
-                payload = mapOf("status" to status.toRemoteStatus())
+                payload = mapOf(
+                    "status" to status.toRemoteStatus(),
+                    "updated_at" to Instant.now().toString()
+                )
             )
 
             if (status == ReservationStatus.CANCELLED) {
@@ -196,14 +205,14 @@ class ReservationRepositoryImpl @Inject constructor(
                 organizerId = row.organizerId,
                 venueId = row.venueId,
                 timeSlotId = row.timeSlotId,
-                venueName = venue?.name ?: row.venueId,
-                timeSlot = slot?.toLabel() ?: row.timeSlotId,
+                venueName = venue?.name.orEmpty(),
+                timeSlot = slot?.toLabel().orEmpty(),
                 status = row.status.toReservationStatus(),
-                totalPrice = null,
-                currency = "NGN",
+                totalPrice = row.totalPrice,
+                currency = row.currency,
                 note = row.notes,
                 createdAt = row.createdAt.toInstantOrNow(),
-                updatedAt = row.createdAt.toInstantOrNow()
+                updatedAt = (row.updatedAt ?: row.createdAt).toInstantOrNow()
             )
         }
     }
@@ -231,6 +240,18 @@ class ReservationRepositoryImpl @Inject constructor(
         val start = startTime.toInstantOrNow().atZone(zoneId)
         val end = endTime.toInstantOrNow().atZone(zoneId)
         return "${start.format(slotStartFormatter)} - ${end.format(slotEndFormatter)}"
+    }
+
+    private fun estimateTotalPrice(venue: VenueRowDto, slot: TimeSlotRowDto): Double? {
+        val hourlyRate = venue.pricePerHour ?: return null
+        val durationHours = slot.durationHours().takeIf { hours -> hours > 0.0 } ?: return null
+        return (round(hourlyRate * durationHours * 100.0) / 100.0)
+    }
+
+    private fun TimeSlotRowDto.durationHours(): Double {
+        val startInstant = startTime.toInstantOrNow()
+        val endInstant = endTime.toInstantOrNow()
+        return (endInstant.toEpochMilli() - startInstant.toEpochMilli()) / 3_600_000.0
     }
 
     private fun String.toInstantOrNow(): Instant =

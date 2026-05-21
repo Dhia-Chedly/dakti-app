@@ -113,7 +113,7 @@ class SupabaseRemoteDataSource @Inject constructor(
         sportType: String?
     ): List<VenueRowDto> {
         val query = linkedMapOf(
-            "select" to "id,name,sport_type,address,latitude,longitude,contact_number,description,capacity,created_at",
+            "select" to "id,name,sport_type,address,city,state,country,latitude,longitude,contact_number,description,image_url,price_per_hour,currency,amenities,capacity,created_at,updated_at",
             "order" to "created_at.desc"
         )
 
@@ -136,7 +136,7 @@ class SupabaseRemoteDataSource @Inject constructor(
         val rows = selectRows<VenueRowDto>(
             table = "venues",
             query = mapOf(
-                "select" to "id,name,sport_type,address,latitude,longitude,contact_number,description,capacity,created_at",
+                "select" to "id,name,sport_type,address,city,state,country,latitude,longitude,contact_number,description,image_url,price_per_hour,currency,amenities,capacity,created_at,updated_at",
                 "id" to "eq.$venueId",
                 "limit" to "1"
             ),
@@ -212,7 +212,7 @@ class SupabaseRemoteDataSource @Inject constructor(
         val rows = selectRows<ReservationRowDto>(
             table = "reservations",
             query = mapOf(
-                "select" to "id,organizer_id,venue_id,time_slot_id,status,notes,created_at",
+                "select" to "id,organizer_id,venue_id,time_slot_id,status,notes,total_price,currency,created_at,updated_at",
                 "id" to "eq.$reservationId",
                 "limit" to "1"
             ),
@@ -225,7 +225,7 @@ class SupabaseRemoteDataSource @Inject constructor(
         return selectRows(
             table = "reservations",
             query = mapOf(
-                "select" to "id,organizer_id,venue_id,time_slot_id,status,notes,created_at",
+                "select" to "id,organizer_id,venue_id,time_slot_id,status,notes,total_price,currency,created_at,updated_at",
                 "organizer_id" to "eq.$organizerId",
                 "order" to "created_at.desc"
             ),
@@ -259,7 +259,7 @@ class SupabaseRemoteDataSource @Inject constructor(
         val rows = selectRows<MatchRowDto>(
             table = "matches",
             query = mapOf(
-                "select" to "id,organizer_id,venue_id,reservation_id,sport_type,match_time,required_players,status,description,created_at,updated_at",
+                "select" to "id,organizer_id,venue_id,reservation_id,title,sport_type,match_time,required_players,status,description,created_at,updated_at",
                 "id" to "eq.$matchId",
                 "limit" to "1"
             ),
@@ -272,7 +272,7 @@ class SupabaseRemoteDataSource @Inject constructor(
         return selectRows(
             table = "matches",
             query = mapOf(
-                "select" to "id,organizer_id,venue_id,reservation_id,sport_type,match_time,required_players,status,description,created_at,updated_at",
+                "select" to "id,organizer_id,venue_id,reservation_id,title,sport_type,match_time,required_players,status,description,created_at,updated_at",
                 "organizer_id" to "eq.$organizerId",
                 "order" to "match_time.asc"
             ),

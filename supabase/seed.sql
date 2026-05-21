@@ -184,67 +184,213 @@ set
   availability_note = excluded.availability_note,
   updated_at = now();
 
+do $$
+begin
+  if to_regclass('storage.buckets') is not null then
+    if exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'storage'
+        and table_name = 'buckets'
+        and column_name = 'public'
+    ) then
+      insert into storage.buckets (id, name, public)
+      values ('venue-images', 'venue-images', true)
+      on conflict (id) do update
+      set
+        name = excluded.name,
+        public = excluded.public;
+    else
+      insert into storage.buckets (id, name)
+      values ('venue-images', 'venue-images')
+      on conflict (id) do update
+      set
+        name = excluded.name;
+    end if;
+  end if;
+end
+$$;
+
 create temporary table seed_venues_tmp as
-with city_seed as (
+with curated_venues as (
   select *
   from (
     values
-      (1, 'Tunis', 'Tunis', 36.8065::double precision, 10.1815::double precision),
-      (2, 'Ariana', 'Ariana', 36.8663::double precision, 10.1647::double precision),
-      (3, 'Ben Arous', 'Ben Arous', 36.7545::double precision, 10.2223::double precision),
-      (4, 'Manouba', 'Manouba', 36.8101::double precision, 10.0963::double precision),
-      (5, 'Nabeul', 'Nabeul', 36.4513::double precision, 10.7357::double precision),
-      (6, 'Sousse', 'Sousse', 35.8256::double precision, 10.6369::double precision),
-      (7, 'Monastir', 'Monastir', 35.7770::double precision, 10.8262::double precision),
-      (8, 'Mahdia', 'Mahdia', 35.5047::double precision, 11.0622::double precision),
-      (9, 'Sfax', 'Sfax', 34.7398::double precision, 10.7600::double precision),
-      (10, 'Gabes', 'Gabes', 33.8815::double precision, 10.0982::double precision),
-      (11, 'Medenine', 'Medenine', 33.3549::double precision, 10.5055::double precision),
-      (12, 'Djerba', 'Medenine', 33.8076::double precision, 10.8451::double precision),
-      (13, 'Bizerte', 'Bizerte', 37.2744::double precision, 9.8739::double precision),
-      (14, 'Kairouan', 'Kairouan', 35.6781::double precision, 10.0963::double precision),
-      (15, 'Gafsa', 'Gafsa', 34.4250::double precision, 8.7842::double precision),
-      (16, 'Tozeur', 'Tozeur', 33.9197::double precision, 8.1335::double precision)
-  ) as c(city_index, city_name, governorate, latitude, longitude)
-),
-sport_seed as (
-  select *
-  from (
-    values
-      (1, 'Football', 140),
-      (2, 'Basketball', 90),
-      (3, 'Tennis', 40),
-      (4, 'Volleyball', 80),
-      (5, 'Handball', 100),
-      (6, 'Padel', 28)
-  ) as s(sport_index, sport_type, base_capacity)
+      (
+        'Stade Olympique de Rades',
+        'Football',
+        'Cite Olympique, Rades, Tunisia',
+        36.7469::double precision,
+        10.2716::double precision,
+        '+21671000001',
+        'National football venue in Rades.',
+        60000,
+        1,
+        1,
+        'https://gearjfbjjniaalcygmux.supabase.co/storage/v1/object/public/venue-images/football/stade-olympique-de-rades.jpg'
+      ),
+      (
+        'Stade Olympique de Sousse',
+        'Football',
+        'Avenue du Stade Olympique, Sousse, Tunisia',
+        35.8286::double precision,
+        10.6292::double precision,
+        '+21673000002',
+        'Major football stadium in Sousse.',
+        28000,
+        2,
+        1,
+        'https://gearjfbjjniaalcygmux.supabase.co/storage/v1/object/public/venue-images/football/stade-olympique-de-sousse.jpg'
+      ),
+      (
+        'Salle Omnisports de Rades',
+        'Basketball',
+        'Complexe Sportif de Rades, Rades, Tunisia',
+        36.7419::double precision,
+        10.2800::double precision,
+        '+21671000003',
+        'Indoor arena regularly used for basketball events.',
+        14000,
+        3,
+        2,
+        'https://gearjfbjjniaalcygmux.supabase.co/storage/v1/object/public/venue-images/basketball/salle-omnisports-de-rades.jpg'
+      ),
+      (
+        'Salle Cherif-Bellamine',
+        'Basketball',
+        'El Gorjani, Tunis, Tunisia',
+        36.7949::double precision,
+        10.1707::double precision,
+        '+21671000004',
+        'Historic indoor hall in Tunis.',
+        2500,
+        4,
+        2,
+        'https://gearjfbjjniaalcygmux.supabase.co/storage/v1/object/public/venue-images/basketball/salle-cherif-bellamine.jpg'
+      ),
+      (
+        'Tennis Club de Tunis',
+        'Tennis',
+        '20 Avenue Alain Savary, Tunis, Tunisia',
+        36.8092::double precision,
+        10.1867::double precision,
+        '+21671000005',
+        'Well-known tennis club in Tunis.',
+        500,
+        5,
+        3,
+        'https://gearjfbjjniaalcygmux.supabase.co/storage/v1/object/public/venue-images/tennis/tennis-club-de-tunis.jpg'
+      ),
+      (
+        'Tennis Club de Bizerte',
+        'Tennis',
+        'Les Jardins de la Municipalite, Bizerte, Tunisia',
+        37.2746::double precision,
+        9.8711::double precision,
+        '+21671000006',
+        'Local tennis club in Bizerte.',
+        350,
+        6,
+        3,
+        'https://gearjfbjjniaalcygmux.supabase.co/storage/v1/object/public/venue-images/tennis/tennis-club-de-bizerte.jpg'
+      ),
+      (
+        'Salle Cherif-Bellamine',
+        'Volleyball',
+        'El Gorjani, Tunis, Tunisia',
+        36.7949::double precision,
+        10.1707::double precision,
+        '+21671000007',
+        'Indoor venue hosting volleyball matches.',
+        2500,
+        7,
+        4,
+        'https://gearjfbjjniaalcygmux.supabase.co/storage/v1/object/public/venue-images/volleyball/salle-cherif-bellamine.jpg'
+      ),
+      (
+        'Salle Mohamed-Zouaoui',
+        'Volleyball',
+        'Parc B, Tunis, Tunisia',
+        36.8050::double precision,
+        10.1726::double precision,
+        '+21671000008',
+        'Home hall for top volleyball fixtures in Tunis.',
+        1800,
+        8,
+        4,
+        'https://gearjfbjjniaalcygmux.supabase.co/storage/v1/object/public/venue-images/volleyball/salle-mohamed-zouaoui.jpg'
+      ),
+      (
+        'Salle Omnisports de Rades',
+        'Handball',
+        'Complexe Sportif de Rades, Rades, Tunisia',
+        36.7419::double precision,
+        10.2800::double precision,
+        '+21671000009',
+        'Primary handball championship venue.',
+        14000,
+        9,
+        5,
+        'https://gearjfbjjniaalcygmux.supabase.co/storage/v1/object/public/venue-images/handball/salle-omnisports-de-rades.jpg'
+      ),
+      (
+        'Salle Mohamed-Zouaoui',
+        'Handball',
+        'Parc B, Tunis, Tunisia',
+        36.8050::double precision,
+        10.1726::double precision,
+        '+21671000010',
+        'Indoor handball venue in central Tunis.',
+        1800,
+        10,
+        5,
+        'https://gearjfbjjniaalcygmux.supabase.co/storage/v1/object/public/venue-images/handball/salle-mohamed-zouaoui.jpg'
+      ),
+      (
+        'Padel Country Club',
+        'Padel',
+        '300 Rue du Lac Leman, Tunis, Tunisia',
+        36.8422::double precision,
+        10.2840::double precision,
+        '+21671000011',
+        'Popular padel destination in Tunis.',
+        120,
+        11,
+        6,
+        'https://gearjfbjjniaalcygmux.supabase.co/storage/v1/object/public/venue-images/padel/padel-country-club.jpg'
+      ),
+      (
+        'Eleven Padel Club',
+        'Padel',
+        'Km 11 Route de Tunis, Sakiet Ezzit, Sfax, Tunisia',
+        34.7707::double precision,
+        10.7052::double precision,
+        '+21671000012',
+        'Padel club serving the Sfax area.',
+        120,
+        12,
+        6,
+        'https://gearjfbjjniaalcygmux.supabase.co/storage/v1/object/public/venue-images/padel/eleven-padel-club.jpg'
+      )
+  ) as v(
+    name,
+    sport_type,
+    address,
+    latitude,
+    longitude,
+    contact_number,
+    description,
+    capacity,
+    city_index,
+    sport_index,
+    image_url
+  )
 )
 select
   public.seed_uuid(
-    'venue-' || lower(replace(c.city_name, ' ', '-')) || '-' || lower(s.sport_type)
+    'venue-' || lower(replace(regexp_replace(name, '[^a-zA-Z0-9]+', '-', 'g'), '--', '-'))
+      || '-' || lower(sport_type)
   ) as id,
-  case s.sport_type
-    when 'Football' then 'Football Stadium ' || c.city_name
-    when 'Basketball' then 'Basket Hall ' || c.city_name
-    when 'Tennis' then 'Tennis Club ' || c.city_name
-    when 'Volleyball' then 'Volleyball Court ' || c.city_name
-    when 'Handball' then 'Handball Arena ' || c.city_name
-    else 'Padel Hub ' || c.city_name
-  end as name,
-  s.sport_type,
-  'Central Sports District, ' || c.city_name || ', Tunisia' as address,
-  c.latitude + ((s.sport_index - 3)::double precision * 0.0030) as latitude,
-  c.longitude + ((c.city_index % 5 - 2)::double precision * 0.0030) as longitude,
-  '+216' || lpad((70000000 + (c.city_index * 100) + s.sport_index)::text, 8, '0') as contact_number,
-  s.sport_type || ' venue in ' || c.city_name || ' for training and match organization.' as description,
-  s.base_capacity + ((c.city_index % 4) * 12) as capacity,
-  c.city_index,
-  s.sport_index
-from city_seed c
-cross join sport_seed s;
-
-insert into public.venues (
-  id,
   name,
   sport_type,
   address,
@@ -252,29 +398,76 @@ insert into public.venues (
   longitude,
   contact_number,
   description,
-  capacity
+  capacity,
+  city_index,
+  sport_index,
+  image_url
+from curated_venues;
+
+insert into public.venues (
+  id,
+  name,
+  sport_type,
+  address,
+  city,
+  state,
+  country,
+  latitude,
+  longitude,
+  contact_number,
+  description,
+  capacity,
+  image_url,
+  price_per_hour,
+  currency,
+  amenities,
+  updated_at
 )
 select
   v.id,
   v.name,
   v.sport_type,
   v.address,
+  nullif(trim(split_part(v.address, ',', 2)), '') as city,
+  null::text as state,
+  'Tunisia' as country,
   v.latitude,
   v.longitude,
   v.contact_number,
   v.description,
-  v.capacity
+  v.capacity,
+  v.image_url,
+  case v.sport_type
+    when 'Football' then 220.0
+    when 'Basketball' then 140.0
+    when 'Tennis' then 90.0
+    when 'Volleyball' then 120.0
+    when 'Handball' then 130.0
+    when 'Padel' then 100.0
+    else 100.0
+  end as price_per_hour,
+  'TND' as currency,
+  jsonb_build_array('Capacity: ' || v.capacity::text) as amenities,
+  now() as updated_at
 from seed_venues_tmp v
 on conflict (id) do update
 set
   name = excluded.name,
   sport_type = excluded.sport_type,
   address = excluded.address,
+  city = excluded.city,
+  state = excluded.state,
+  country = excluded.country,
   latitude = excluded.latitude,
   longitude = excluded.longitude,
   contact_number = excluded.contact_number,
   description = excluded.description,
-  capacity = excluded.capacity;
+  capacity = excluded.capacity,
+  image_url = excluded.image_url,
+  price_per_hour = excluded.price_per_hour,
+  currency = excluded.currency,
+  amenities = excluded.amenities,
+  updated_at = now();
 
 insert into public.time_slots (
   id,

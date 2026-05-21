@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.venues.VenueListItemUi
 import com.dakti.app.presentation.venues.VenueTimeSlotUi
 import com.dakti.app.ui.components.AppStateCard
+import com.dakti.app.ui.components.daktiAccentCard
+import com.dakti.app.ui.components.daktiCardBorder
 
 @Composable
 fun SportFilterChip(
@@ -46,10 +48,14 @@ fun VenueCard(
     onDetailsClick: (String) -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
+        ),
+        border = daktiCardBorder()
     ) {
         Column(
             modifier = Modifier
@@ -110,12 +116,18 @@ fun TimeSlotItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .daktiAccentCard(
+                shape = MaterialTheme.shapes.medium,
+                elevation = if (isSelected) 3.dp else 2.dp
+            )
             .clickable(enabled = isAvailable) {
                 onClick(slot.id)
             },
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = containerColor
-        )
+        ),
+        border = daktiCardBorder(strong = isSelected)
     ) {
         Column(
             modifier = Modifier.padding(12.dp),

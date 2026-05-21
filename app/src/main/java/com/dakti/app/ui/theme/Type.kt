@@ -15,6 +15,8 @@ private val DaktiHeadlineFont = FontFamily(
     Font(resId = R.font.teko_variable, weight = FontWeight.Bold)
 )
 
+private val DaktiBodyFont = FontFamily.SansSerif
+
 val Typography = Typography(
     displayLarge = TextStyle(
         fontFamily = DaktiHeadlineFont,
@@ -63,41 +65,49 @@ val Typography = Typography(
         letterSpacing = 0.1.sp
     ),
     titleMedium = TextStyle(
+        fontFamily = DaktiBodyFont,
         fontWeight = FontWeight.SemiBold,
         fontSize = 19.sp,
-        lineHeight = 26.sp
+        lineHeight = 25.sp
     ),
     titleSmall = TextStyle(
+        fontFamily = DaktiBodyFont,
         fontWeight = FontWeight.SemiBold,
         fontSize = 17.sp,
-        lineHeight = 24.sp
+        lineHeight = 23.sp
     ),
     bodyLarge = TextStyle(
+        fontFamily = DaktiBodyFont,
         fontWeight = FontWeight.Normal,
         fontSize = 18.sp,
-        lineHeight = 26.sp
+        lineHeight = 27.sp
     ),
     bodyMedium = TextStyle(
+        fontFamily = DaktiBodyFont,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp
     ),
     bodySmall = TextStyle(
+        fontFamily = DaktiBodyFont,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
-        lineHeight = 21.sp
+        lineHeight = 20.sp
     ),
     labelLarge = TextStyle(
+        fontFamily = DaktiBodyFont,
         fontWeight = FontWeight.SemiBold,
         fontSize = 15.sp,
         lineHeight = 20.sp
     ),
     labelMedium = TextStyle(
+        fontFamily = DaktiBodyFont,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 17.sp
     ),
     labelSmall = TextStyle(
+        fontFamily = DaktiBodyFont,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 15.sp

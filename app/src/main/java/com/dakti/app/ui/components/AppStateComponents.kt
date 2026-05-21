@@ -1,5 +1,6 @@
 package com.dakti.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -58,10 +59,20 @@ fun AppStateCard(
     } else {
         MaterialTheme.colorScheme.onSurface
     }
+    val border = if (isError) {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+    } else {
+        daktiCardBorder()
+    }
+    val shape = MaterialTheme.shapes.medium
 
     Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = colors
+        modifier = modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = shape),
+        shape = shape,
+        colors = colors,
+        border = border
     ) {
         Column(
             modifier = Modifier
@@ -114,8 +125,12 @@ fun AppInlineMessage(
     }
 
     Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = containerColor)
+        modifier = modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.small, elevation = 1.dp),
+        shape = MaterialTheme.shapes.small,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = daktiCardBorder(alphaMultiplier = 0.8f)
     ) {
         Text(
             text = message,
@@ -125,4 +140,3 @@ fun AppInlineMessage(
         )
     }
 }
-

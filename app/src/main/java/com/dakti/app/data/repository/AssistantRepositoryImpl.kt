@@ -27,6 +27,7 @@ import com.dakti.app.domain.model.ReschedulingSuggestion
 import com.dakti.app.domain.model.SuggestedAction
 import com.dakti.app.domain.repository.AssistantRepository
 import com.dakti.app.util.Resource
+import com.google.gson.JsonObject
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -136,33 +137,48 @@ class AssistantRepositoryImpl @Inject constructor(
                 ?: response.get("message")?.asString
                 ?: "Review the suggested options and confirm one."
 
-            val venueSuggestions = response.getAsJsonArray("suggestions")
-                ?.mapNotNull { item ->
-                    val objectValue = item.asJsonObject
-                    val venueId = objectValue.get("venueId")?.asString ?: return@mapNotNull null
-                    val slotId = objectValue.get("timeSlotId")?.asString ?: return@mapNotNull null
-                    val startTime = objectValue.get("startTime")?.asString?.toInstantOrNow() ?: return@mapNotNull null
-                    val endTime = objectValue.get("endTime")?.asString?.toInstantOrNow() ?: startTime
-                    val venueName = objectValue.get("venueName")?.asString ?: "Venue option"
-                    val venueAddress = objectValue.get("venueAddress")?.asString.orEmpty()
-                    val reason = objectValue.get("recommendedReason")?.asString
-                        ?: "Good option based on your requested criteria."
-
-                    AssistantVenueSuggestion(
-                        venueId = venueId,
-                        venueName = venueName,
-                        venueAddress = venueAddress,
-                        sportType = request.sportType ?: "Football",
-                        timeSlotId = slotId,
-                        timeSlotLabel = formatRemoteSlotLabel(startTime, endTime),
-                        startTime = startTime,
-                        endTime = endTime,
-                        slotCapacity = objectValue.get("capacity")?.asInt,
-                        isPreferredTime = reason.contains("preferred", ignoreCase = true),
-                        reason = reason
-                    )
-                }
+            val suggestionObjects = response.getAsJsonArray("suggestions")
+                ?.mapNotNull { item -> item?.takeIf { it.isJsonObject }?.asJsonObject }
                 .orEmpty()
+            val suggestedVenueIds = suggestionObjects
+                .mapNotNull { objectValue -> objectValue.stringOrNull("venueId") }
+                .distinct()
+            val suggestedVenuesById = suggestedVenueIds.associateWith { venueId ->
+                supabaseRemoteDataSource.getVenueById(venueId)
+            }
+
+            val venueSuggestions = suggestionObjects.mapNotNull { objectValue ->
+                val venueId = objectValue.stringOrNull("venueId") ?: return@mapNotNull null
+                val slotId = objectValue.stringOrNull("timeSlotId") ?: return@mapNotNull null
+                val startTime = objectValue.stringOrNull("startTime")?.toInstantOrNow()
+                    ?: return@mapNotNull null
+                val endTime = objectValue.stringOrNull("endTime")?.toInstantOrNow() ?: startTime
+                val hydratedVenue = suggestedVenuesById[venueId]
+                val venueName = objectValue.stringOrNull("venueName")
+                    ?: hydratedVenue?.name
+                    .orEmpty()
+                val venueAddress = objectValue.stringOrNull("venueAddress")
+                    ?: hydratedVenue?.address
+                    .orEmpty()
+                val sportType = objectValue.stringOrNull("sportType")
+                    ?: hydratedVenue?.sportType
+                    ?: request.sportType.orEmpty()
+                val reason = objectValue.stringOrNull("recommendedReason") ?: "Not provided"
+
+                AssistantVenueSuggestion(
+                    venueId = venueId,
+                    venueName = venueName,
+                    venueAddress = venueAddress,
+                    sportType = sportType,
+                    timeSlotId = slotId,
+                    timeSlotLabel = formatRemoteSlotLabel(startTime, endTime),
+                    startTime = startTime,
+                    endTime = endTime,
+                    slotCapacity = objectValue.get("capacity")?.asInt,
+                    isPreferredTime = reason.contains("preferred", ignoreCase = true),
+                    reason = reason
+                )
+            }
 
             val suggestions = venueSuggestions.take(3).map { suggestion ->
                 AssistantSuggestionItem(
@@ -180,11 +196,11 @@ class AssistantRepositoryImpl @Inject constructor(
                     id = "proposal-${UUID.randomUUID()}",
                     type = AssistantActionType.CREATE_RESERVATION_AND_MATCH,
                     title = "Create Reservation and Match",
-                    summary = "Reserve ${topChoice.venueName} at ${topChoice.timeSlotLabel} and create a ${request.sportType ?: "Football"} match.",
+                    summary = "Reserve ${topChoice.venueName} at ${topChoice.timeSlotLabel} and create a ${topChoice.sportType} match.",
                     requiresConfirmation = true,
                     venueId = topChoice.venueId,
                     timeSlotId = topChoice.timeSlotId,
-                    sportType = request.sportType ?: "Football",
+                    sportType = topChoice.sportType,
                     requiredPlayers = request.desiredPlayers ?: 10,
                     scheduledStartTime = topChoice.startTime,
                     reservationId = null,
@@ -310,14 +326,24 @@ class AssistantRepositoryImpl @Inject constructor(
         }.getOrNull()
 
         if (monitored != null) {
+            val match = supabaseRemoteDataSource.getMatchById(matchId)
+            val venue = match?.venueId?.let { venueId -> supabaseRemoteDataSource.getVenueById(venueId) }
             val status = monitored.get("readinessStatus")?.asString.orEmpty().toMatchReadinessStatus()
             val participation = monitored.getAsJsonObject("participation")
-            val requiredPlayers = participation?.get("requiredPlayers")?.asInt ?: 0
+            val requiredPlayers = participation?.get("requiredPlayers")?.asInt ?: (match?.requiredPlayers ?: 0)
             val confirmedPlayers = participation?.get("confirmedPlayers")?.asInt ?: 0
             val pendingPlayers = participation?.get("pendingPlayers")?.asInt ?: 0
             val declinedPlayers = participation?.get("declinedPlayers")?.asInt ?: 0
             val remainingSpots = participation?.get("remainingSpots")?.asInt
                 ?: (requiredPlayers - confirmedPlayers).coerceAtLeast(0)
+            val invitedPlayersCount = participation?.get("invitedPlayers")?.asInt
+                ?: (confirmedPlayers + pendingPlayers + declinedPlayers)
+            val issueSummary = monitored.stringOrNull("issueSummary") ?: "Not provided"
+            val scheduledStartTime = monitored.stringOrNull("scheduledStartTime")?.toInstantOrNow()
+                ?: match?.matchTime?.toInstantOrNow()
+                ?: Instant.now()
+            val minutesUntilMatch = ((scheduledStartTime.toEpochMilli() - Instant.now().toEpochMilli()) / 60_000)
+                .coerceAtLeast(0)
 
             val suggestions = monitored.getAsJsonArray("suggestedNextActions")
                 ?.mapIndexed { index, item ->
@@ -328,25 +354,38 @@ class AssistantRepositoryImpl @Inject constructor(
                             1 -> MonitoringSuggestedActionType.INVITE_MORE_PLAYERS
                             else -> MonitoringSuggestedActionType.REVIEW_RESCHEDULE_OPTIONS
                         },
-                        title = item?.asString ?: "Take action",
+                        title = item?.asString ?: "Not provided",
                         description = null
                     )
                 }
                 .orEmpty()
 
-            val alternatives = monitored.getAsJsonArray("alternativeSlots")
-                ?.map { item ->
-                    val slot = item.asJsonObject
+            val alternativeSlots = monitored.getAsJsonArray("alternativeSlots")
+                ?.mapNotNull { item -> item?.takeIf { it.isJsonObject }?.asJsonObject }
+                .orEmpty()
+            val alternativeVenueIds = alternativeSlots
+                .mapNotNull { slot -> slot.stringOrNull("venueId") }
+                .distinct()
+            val alternativeVenuesById = alternativeVenueIds.associateWith { venueId ->
+                supabaseRemoteDataSource.getVenueById(venueId)
+            }
+
+            val alternatives = alternativeSlots
+                .map { slot ->
+                    val venueId = slot.stringOrNull("venueId").orEmpty()
+                    val hydratedVenue = alternativeVenuesById[venueId]
+                    val startTime = slot.stringOrNull("startTime")?.toInstantOrNow() ?: Instant.now()
+                    val endTime = slot.stringOrNull("endTime")?.toInstantOrNow() ?: startTime
                     ReschedulingSuggestion(
                         id = "alt-${UUID.randomUUID()}",
-                        venueId = slot.get("venueId")?.asString.orEmpty(),
-                        venueName = "Alternative Venue",
-                        venueAddress = "",
-                        timeSlotId = slot.get("timeSlotId")?.asString.orEmpty(),
-                        timeSlotLabel = slot.get("startTime")?.asString.orEmpty(),
-                        startTime = slot.get("startTime")?.asString.orEmpty().toInstantOrNow(),
-                        endTime = slot.get("endTime")?.asString.orEmpty().toInstantOrNow(),
-                        reason = "Suggested by monitoring"
+                        venueId = venueId,
+                        venueName = slot.stringOrNull("venueName") ?: hydratedVenue?.name.orEmpty(),
+                        venueAddress = slot.stringOrNull("venueAddress") ?: hydratedVenue?.address.orEmpty(),
+                        timeSlotId = slot.stringOrNull("timeSlotId").orEmpty(),
+                        timeSlotLabel = formatRemoteSlotLabel(startTime, endTime),
+                        startTime = startTime,
+                        endTime = endTime,
+                        reason = slot.stringOrNull("reason") ?: "Not provided"
                     )
                 }
                 .orEmpty()
@@ -354,20 +393,20 @@ class AssistantRepositoryImpl @Inject constructor(
             return Resource.Success(
                 MatchMonitoringResult(
                     matchId = matchId,
-                    matchTitle = "Monitored Match",
-                    sportType = "Sports",
-                    venueName = "Venue",
-                    scheduledStartTime = Instant.now(),
+                    matchTitle = monitored.stringOrNull("matchTitle") ?: match?.title.orEmpty(),
+                    sportType = monitored.stringOrNull("sportType") ?: match?.sportType.orEmpty(),
+                    venueName = monitored.stringOrNull("venueName") ?: venue?.name.orEmpty(),
+                    scheduledStartTime = scheduledStartTime,
                     status = status,
-                    reason = monitored.get("issueSummary")?.asString ?: "No issue summary",
-                    summary = monitored.get("issueSummary")?.asString ?: "No summary",
+                    reason = issueSummary,
+                    summary = issueSummary,
                     requiredPlayers = requiredPlayers,
-                    invitedPlayersCount = confirmedPlayers + pendingPlayers + declinedPlayers,
+                    invitedPlayersCount = invitedPlayersCount,
                     confirmedPlayersCount = confirmedPlayers,
                     pendingPlayersCount = pendingPlayers,
                     declinedPlayersCount = declinedPlayers,
                     remainingSpots = remainingSpots,
-                    minutesUntilMatch = 0,
+                    minutesUntilMatch = minutesUntilMatch,
                     shouldAlertOrganizer = status != MatchReadinessStatus.READY,
                     suggestedActions = suggestions,
                     reschedulingSuggestions = alternatives,
@@ -729,6 +768,13 @@ class AssistantRepositoryImpl @Inject constructor(
 
     private fun String.toInstantOrNow(): Instant =
         runCatching { Instant.parse(this) }.getOrElse { Instant.now() }
+
+    private fun JsonObject.stringOrNull(key: String): String? =
+        get(key)
+            ?.takeIf { element -> !element.isJsonNull }
+            ?.asString
+            ?.trim()
+            ?.takeIf { value -> value.isNotBlank() }
 
     private companion object {
         private const val TAG: String = "AssistantRepository"

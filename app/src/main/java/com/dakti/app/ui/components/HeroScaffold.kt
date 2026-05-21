@@ -1,13 +1,14 @@
 package com.dakti.app.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -15,10 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.dakti.app.R
 import com.dakti.app.ui.theme.DaktiThemeTokens
 
 @Composable
@@ -31,10 +29,17 @@ fun DaktiHeroScaffold(
     floatingActionButton: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
+    val backgroundTexture = DaktiThemeTokens.backgroundScrim
+    val resolvedContainerColor = if (containerColor == Color.Transparent) {
+        MaterialTheme.colorScheme.background
+    } else {
+        containerColor
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(color = Color.Transparent)
+            .background(color = backgroundTexture.base)
     ) {
         DaktiHeroBackdrop()
         Scaffold(
@@ -42,7 +47,7 @@ fun DaktiHeroScaffold(
             bottomBar = bottomBar,
             snackbarHost = snackbarHost,
             floatingActionButton = floatingActionButton,
-            containerColor = containerColor,
+            containerColor = resolvedContainerColor,
             content = content
         )
     }
@@ -54,29 +59,37 @@ fun DaktiHeroBackdrop(
     content: @Composable BoxScope.() -> Unit = {}
 ) {
     val hero = DaktiThemeTokens.hero
+    val texture = DaktiThemeTokens.backgroundScrim
+
     Box(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
+            .fillMaxSize()
+            .background(texture.base)
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.sports_bg),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
         DaktiBackgroundScrim()
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
+                .padding(top = 36.dp, end = 10.dp)
                 .size(190.dp)
                 .clip(CircleShape)
-                .background(hero.glow.copy(alpha = 0.08f))
+                .background(texture.orbPrimary)
         )
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
+                .padding(top = 112.dp, start = 8.dp)
                 .size(160.dp)
                 .clip(CircleShape)
-                .background(hero.glassSoft.copy(alpha = 0.55f))
+                .background(texture.orbSecondary)
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 94.dp, end = 18.dp)
+                .size(138.dp)
+                .clip(CircleShape)
+                .background(hero.glow.copy(alpha = 0.13f))
         )
         content()
     }
@@ -86,7 +99,7 @@ fun DaktiHeroBackdrop(
 fun DaktiBackgroundScrim(
     modifier: Modifier = Modifier
 ) {
-    val scrim = DaktiThemeTokens.backgroundScrim
+    val texture = DaktiThemeTokens.backgroundScrim
 
     Box(
         modifier = modifier
@@ -94,10 +107,10 @@ fun DaktiBackgroundScrim(
             .background(
                 brush = Brush.verticalGradient(
                     colorStops = arrayOf(
-                        0f to scrim.strong,
-                        0.26f to scrim.medium,
-                        0.56f to scrim.light,
-                        0.8f to Color.Transparent
+                        0f to texture.verticalStart,
+                        0.32f to texture.verticalMid,
+                        0.72f to texture.verticalEnd,
+                        1f to Color.Transparent
                     )
                 )
             )
@@ -108,9 +121,9 @@ fun DaktiBackgroundScrim(
             .background(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        scrim.strong.copy(alpha = 0.92f),
-                        scrim.medium.copy(alpha = 0.7f),
-                        scrim.light.copy(alpha = 0.44f),
+                        texture.radialCore,
+                        texture.radialMid,
+                        texture.radialOuter,
                         Color.Transparent
                     )
                 )

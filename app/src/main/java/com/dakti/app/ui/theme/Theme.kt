@@ -102,9 +102,9 @@ data class DaktiSpacing(
 
 @Immutable
 data class DaktiElevations(
-    val low: Dp = 1.dp,
-    val medium: Dp = 3.dp,
-    val high: Dp = 6.dp
+    val low: Dp = 2.dp,
+    val medium: Dp = 6.dp,
+    val high: Dp = 10.dp
 )
 
 @Immutable
@@ -125,14 +125,31 @@ data class DaktiChromeColors(
     val border: Color,
     val content: Color,
     val selectedPill: Color,
-    val selectedContent: Color
+    val selectedContent: Color,
+    val shadowAmbient: Color,
+    val shadowSpot: Color
 )
 
 @Immutable
 data class DaktiBackdropScrimColors(
-    val strong: Color,
-    val medium: Color,
-    val light: Color
+    val base: Color,
+    val verticalStart: Color,
+    val verticalMid: Color,
+    val verticalEnd: Color,
+    val radialCore: Color,
+    val radialMid: Color,
+    val radialOuter: Color,
+    val orbPrimary: Color,
+    val orbSecondary: Color
+)
+
+@Immutable
+data class DaktiAccentShadowColors(
+    val cardBorder: Color,
+    val cardBorderStrong: Color,
+    val cardShadowAmbient: Color,
+    val cardShadowSpot: Color,
+    val glowTint: Color
 )
 
 @Immutable
@@ -154,34 +171,10 @@ private val LocalDaktiDimensions = staticCompositionLocalOf { DaktiDimensions() 
 private val LocalDaktiSpacing = staticCompositionLocalOf { DaktiSpacing() }
 private val LocalDaktiElevations = staticCompositionLocalOf { DaktiElevations() }
 private val LocalDaktiChromeMetrics = staticCompositionLocalOf { DaktiChromeMetrics() }
-private val LocalDaktiHeroColors = staticCompositionLocalOf {
-    DaktiHeroColors(
-        top = Color(0xFFEEF5FF),
-        middle = Color(0xFFE3EEFF),
-        bottom = Color(0xFFD7E7FF),
-        glow = DaktiLimeSoft,
-        onHero = DaktiOnBackground,
-        onHeroMuted = DaktiOnSurfaceVariant,
-        glassStrong = Color.White.copy(alpha = 0.95f),
-        glassSoft = Color.White.copy(alpha = 0.5f)
-    )
-}
-private val LocalDaktiChromeColors = staticCompositionLocalOf {
-    DaktiChromeColors(
-        container = Color.White.copy(alpha = 0.64f),
-        border = Color.White.copy(alpha = 0.62f),
-        content = DaktiOnBackground,
-        selectedPill = DaktiPrimaryContainer.copy(alpha = 0.9f),
-        selectedContent = DaktiOnPrimaryContainer
-    )
-}
-private val LocalDaktiBackdropScrims = staticCompositionLocalOf {
-    DaktiBackdropScrimColors(
-        strong = Color(0xCCEAF2FF),
-        medium = Color(0x99E2ECFF),
-        light = Color(0x66DAE6FF)
-    )
-}
+private val LocalDaktiHeroColors = staticCompositionLocalOf { heroColorsFor(darkTheme = false) }
+private val LocalDaktiChromeColors = staticCompositionLocalOf { chromeColorsFor(darkTheme = false) }
+private val LocalDaktiBackdropScrims = staticCompositionLocalOf { scrimColorsFor(darkTheme = false) }
+private val LocalDaktiAccentShadows = staticCompositionLocalOf { accentShadowsFor(darkTheme = false) }
 private val LocalDaktiSemanticColors = staticCompositionLocalOf {
     DaktiSemanticColors(
         success = DaktiSuccess,
@@ -214,6 +207,9 @@ object DaktiThemeTokens {
     val backgroundScrim: DaktiBackdropScrimColors
         @Composable get() = LocalDaktiBackdropScrims.current
 
+    val accentShadows: DaktiAccentShadowColors
+        @Composable get() = LocalDaktiAccentShadows.current
+
     val semantic: DaktiSemanticColors
         @Composable get() = LocalDaktiSemanticColors.current
 
@@ -224,25 +220,25 @@ object DaktiThemeTokens {
 private fun heroColorsFor(darkTheme: Boolean): DaktiHeroColors {
     return if (darkTheme) {
         DaktiHeroColors(
-            top = Color(0xFF3B5474),
-            middle = Color(0xFF446183),
-            bottom = Color(0xFF4F6F92),
-            glow = DaktiLimeSoft,
-            onHero = Color(0xFFEAF2FF),
-            onHeroMuted = Color(0xFFD9E6F8),
-            glassStrong = Color(0xD9435F82),
-            glassSoft = Color(0x754E6D92)
+            top = Color(0xFF0A110D),
+            middle = Color(0xFF101A14),
+            bottom = Color(0xFF132119),
+            glow = Color(0xFF55C896),
+            onHero = DaktiDarkOnBackground,
+            onHeroMuted = DaktiDarkOnSurfaceVariant,
+            glassStrong = Color(0xD9192A22),
+            glassSoft = Color(0xA015231D)
         )
     } else {
         DaktiHeroColors(
-            top = Color(0xFFEEF5FF),
-            middle = Color(0xFFE3EEFF),
-            bottom = Color(0xFFD7E7FF),
-            glow = DaktiLimeSoft,
+            top = Color(0xFFFFFFFF),
+            middle = Color(0xFFF8FFF9),
+            bottom = Color(0xFFEEF8F1),
+            glow = Color(0xFF56D79F),
             onHero = DaktiOnBackground,
             onHeroMuted = DaktiOnSurfaceVariant,
-            glassStrong = Color.White.copy(alpha = 0.95f),
-            glassSoft = Color.White.copy(alpha = 0.58f)
+            glassStrong = Color(0xF3FFFFFF),
+            glassSoft = Color(0xCCF0F9F3)
         )
     }
 }
@@ -250,19 +246,23 @@ private fun heroColorsFor(darkTheme: Boolean): DaktiHeroColors {
 private fun chromeColorsFor(darkTheme: Boolean): DaktiChromeColors {
     return if (darkTheme) {
         DaktiChromeColors(
-            container = Color(0xB237506F),
-            border = Color(0x80BFD7F4),
-            content = Color(0xFFE6F0FF),
-            selectedPill = Color(0xFF9CB9DB),
-            selectedContent = Color(0xFF10263F)
+            container = Color(0xD91A2A22),
+            border = Color(0x99A0D4B8),
+            content = DaktiDarkOnBackground,
+            selectedPill = Color(0xFF2C6A50),
+            selectedContent = Color(0xFFE6F4EB),
+            shadowAmbient = Color(0x6620A56D),
+            shadowSpot = Color(0x8C0F3C2D)
         )
     } else {
         DaktiChromeColors(
-            container = Color.White.copy(alpha = 0.64f),
-            border = Color.White.copy(alpha = 0.62f),
+            container = Color(0xEFFFFFFF),
+            border = Color(0xA8A6CDB7),
             content = DaktiOnBackground,
-            selectedPill = DaktiPrimaryContainer.copy(alpha = 0.9f),
-            selectedContent = DaktiOnPrimaryContainer
+            selectedPill = Color(0xFFBDF2D7),
+            selectedContent = Color(0xFF0C3A2A),
+            shadowAmbient = Color(0x332E8F66),
+            shadowSpot = Color(0x4D296D4F)
         )
     }
 }
@@ -270,15 +270,47 @@ private fun chromeColorsFor(darkTheme: Boolean): DaktiChromeColors {
 private fun scrimColorsFor(darkTheme: Boolean): DaktiBackdropScrimColors {
     return if (darkTheme) {
         DaktiBackdropScrimColors(
-            strong = Color(0xB2233550),
-            medium = Color(0x8A2B3F5E),
-            light = Color(0x66344B6D)
+            base = Color(0xFF090F0C),
+            verticalStart = Color(0x4A0E2B1D),
+            verticalMid = Color(0x32143024),
+            verticalEnd = Color(0x140F1D16),
+            radialCore = Color(0x6E1E6E4D),
+            radialMid = Color(0x4A1A573E),
+            radialOuter = Color(0x1C163026),
+            orbPrimary = Color(0x4A2B8A60),
+            orbSecondary = Color(0x33216C4D)
         )
     } else {
         DaktiBackdropScrimColors(
-            strong = Color(0xCCEAF2FF),
-            medium = Color(0x99E2ECFF),
-            light = Color(0x66DAE6FF)
+            base = Color(0xFFFFFFFF),
+            verticalStart = Color(0x26C8F0D6),
+            verticalMid = Color(0x16E0F6E8),
+            verticalEnd = Color(0x0CF7FBF8),
+            radialCore = Color(0x2EA9E9C9),
+            radialMid = Color(0x1BC9F0DA),
+            radialOuter = Color(0x09E9F7EF),
+            orbPrimary = Color(0x26A4EECB),
+            orbSecondary = Color(0x19C3F5DB)
+        )
+    }
+}
+
+private fun accentShadowsFor(darkTheme: Boolean): DaktiAccentShadowColors {
+    return if (darkTheme) {
+        DaktiAccentShadowColors(
+            cardBorder = Color(0x99A1D3B7),
+            cardBorderStrong = Color(0xCC8CD3AE),
+            cardShadowAmbient = Color(0x6638B67F),
+            cardShadowSpot = Color(0x8C2A8058),
+            glowTint = Color(0x3390E5BB)
+        )
+    } else {
+        DaktiAccentShadowColors(
+            cardBorder = Color(0x99A4CDB7),
+            cardBorderStrong = Color(0xCCA0D5B9),
+            cardShadowAmbient = Color(0x332D9A6A),
+            cardShadowSpot = Color(0x52317F5C),
+            glowTint = Color(0x3388E7BC)
         )
     }
 }
@@ -296,6 +328,7 @@ fun DaktiTheme(
         LocalDaktiHeroColors provides heroColorsFor(darkTheme),
         LocalDaktiChromeColors provides chromeColorsFor(darkTheme),
         LocalDaktiBackdropScrims provides scrimColorsFor(darkTheme),
+        LocalDaktiAccentShadows provides accentShadowsFor(darkTheme),
         LocalDaktiSemanticColors provides DaktiSemanticColors(
             success = DaktiSuccess,
             warning = DaktiWarning,

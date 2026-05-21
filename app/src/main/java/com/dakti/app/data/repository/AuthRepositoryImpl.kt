@@ -166,7 +166,7 @@ class AuthRepositoryImpl @Inject constructor(
                     userId = profile.id,
                     rating = 0.0,
                     totalHostedMatches = 0,
-                    organizationName = "${profile.fullName} Hosts",
+                    organizationName = null,
                     isVerified = false,
                     createdAt = profile.createdAt.toInstantOrNow(),
                     updatedAt = profile.updatedAt.toInstantOrNow()
@@ -192,12 +192,14 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun upsertOrganizerProfile(organizer: Organizer): Resource<Unit> {
         return runCatching {
+            val authenticated = currentUser.value
+                ?: throw IllegalStateException("No authenticated user")
             supabaseRemoteDataSource.upsertProfile(
                 payload = mapOf(
                     "id" to organizer.userId,
                     "role" to "organizer",
-                    "full_name" to (currentUser.value?.displayName ?: "Organizer"),
-                    "email" to (currentUser.value?.email ?: "unknown@dakti.app"),
+                    "full_name" to authenticated.displayName,
+                    "email" to authenticated.email,
                     "updated_at" to Instant.now().toString()
                 )
             )
@@ -209,12 +211,14 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun upsertPlayerProfile(player: Player): Resource<Unit> {
         return runCatching {
+            val authenticated = currentUser.value
+                ?: throw IllegalStateException("No authenticated user")
             supabaseRemoteDataSource.upsertProfile(
                 payload = mapOf(
                     "id" to player.userId,
                     "role" to "player",
-                    "full_name" to (currentUser.value?.displayName ?: "Player"),
-                    "email" to (currentUser.value?.email ?: "unknown@dakti.app"),
+                    "full_name" to authenticated.displayName,
+                    "email" to authenticated.email,
                     "preferred_sport" to player.preferredSport,
                     "availability_note" to player.availabilityNote,
                     "updated_at" to Instant.now().toString()

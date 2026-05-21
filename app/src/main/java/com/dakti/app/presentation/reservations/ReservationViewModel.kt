@@ -264,11 +264,10 @@ class ReservationViewModel @Inject constructor(
         )
 
     private fun buildPriceLabel(totalPrice: Double?, currency: String?): String {
-        if (totalPrice == null) {
-            return "Price not available"
+        if (totalPrice == null || currency.isNullOrBlank()) {
+            return "Not provided"
         }
-        val currencyLabel = currency?.ifBlank { "NGN" } ?: "NGN"
-        return "$currencyLabel ${totalPrice.toInt()}"
+        return "$currency ${totalPrice.toInt()}"
     }
 
     private companion object {

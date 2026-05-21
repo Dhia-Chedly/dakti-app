@@ -21,14 +21,20 @@ import com.dakti.app.domain.model.ReservationStatus
 import com.dakti.app.presentation.reservations.ReservationDraftUi
 import com.dakti.app.presentation.reservations.ReservationHistoryItemUi
 import com.dakti.app.ui.components.AppStateCard
+import com.dakti.app.ui.components.daktiAccentCard
+import com.dakti.app.ui.components.daktiCardBorder
 
 @Composable
 fun ReservationSummaryCard(draft: ReservationDraftUi) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
+        ),
+        border = daktiCardBorder()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -71,6 +77,7 @@ fun ReservationCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 2.dp)
             .let { base ->
                 if (onClick != null) {
                     base.clickable(onClick = onClick)
@@ -78,9 +85,11 @@ fun ReservationCard(
                     base
                 }
             },
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
+        ),
+        border = daktiCardBorder()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -173,10 +182,14 @@ fun ReservationSuccessContent(
     onCreateMatchPlaceholder: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .daktiAccentCard(shape = MaterialTheme.shapes.medium, elevation = 3.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+        ),
+        border = daktiCardBorder(strong = true)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
