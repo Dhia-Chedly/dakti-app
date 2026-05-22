@@ -28,8 +28,7 @@ fun ReservationConfirmationScreen(
     onConfirm: () -> Unit,
     onBack: () -> Unit,
     onMyReservationsClick: () -> Unit,
-    onHomeClick: () -> Unit,
-    onCreateMatchPlaceholder: () -> Unit
+    onHomeClick: () -> Unit
 ) {
     DaktiHeroScaffold(
         topBar = {
@@ -78,8 +77,7 @@ fun ReservationConfirmationScreen(
                     ReservationSuccessContent(
                         message = successMessage,
                         onMyReservationsClick = onMyReservationsClick,
-                        onHomeClick = onHomeClick,
-                        onCreateMatchPlaceholder = onCreateMatchPlaceholder
+                        onHomeClick = onHomeClick
                     )
                 }
             }

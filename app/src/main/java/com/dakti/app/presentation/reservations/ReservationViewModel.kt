@@ -159,7 +159,13 @@ class ReservationViewModel @Inject constructor(
                 )
             ) {
                 is Resource.Success -> {
-                    val notificationResult = sendReservationConfirmationNotificationUseCase(result.data)
+                    val notificationResult = runCatching {
+                        sendReservationConfirmationNotificationUseCase(result.data)
+                    }.getOrElse { error ->
+                        Resource.Error(
+                            error.message ?: "Reservation confirmed, but notification could not be delivered."
+                        )
+                    }
                     val notificationHint = if (notificationResult is Resource.Error) {
                         " Notification permission may be disabled."
                     } else {

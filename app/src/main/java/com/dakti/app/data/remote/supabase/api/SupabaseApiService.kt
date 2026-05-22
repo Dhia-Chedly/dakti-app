@@ -48,7 +48,7 @@ interface SupabaseApiService {
     suspend fun selectRows(
         @Path("table", encoded = true) table: String,
         @HeaderMap headers: Map<String, String>,
-        @QueryMap(encoded = true) query: Map<String, String>
+        @QueryMap query: Map<String, String>
     ): JsonArray
 
     @POST("rest/v1/{table}")
@@ -62,7 +62,7 @@ interface SupabaseApiService {
     suspend fun updateRows(
         @Path("table", encoded = true) table: String,
         @HeaderMap headers: Map<String, String>,
-        @QueryMap(encoded = true) filters: Map<String, String>,
+        @QueryMap filters: Map<String, String>,
         @Body payload: JsonObject
     ): JsonArray
 

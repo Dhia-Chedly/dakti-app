@@ -11,14 +11,20 @@ import androidx.compose.ui.graphics.vector.ImageVector
 data class BottomNavItem(
     val route: String,
     val label: String,
-    val icon: ImageVector
+    val icon: ImageVector,
+    val isCenterProminent: Boolean = false
 )
 
 val daktiBottomNavItems = listOf(
     BottomNavItem(route = AppRoute.Home.route, label = "Home", icon = Icons.Outlined.Home),
     BottomNavItem(route = AppRoute.Venues.route, label = "Venues", icon = Icons.Outlined.Stadium),
-    BottomNavItem(route = AppRoute.Matches.route, label = "Matches", icon = Icons.Outlined.SportsSoccer),
-    BottomNavItem(route = AppRoute.Assistant.route, label = "Assistant", icon = Icons.Outlined.SmartToy),
+    BottomNavItem(
+        route = AppRoute.Assistant.route,
+        label = "AI Assistant",
+        icon = Icons.Outlined.SmartToy,
+        isCenterProminent = true
+    ),
+    BottomNavItem(route = AppRoute.Matches.route, label = "My Matches", icon = Icons.Outlined.SportsSoccer),
     BottomNavItem(route = AppRoute.Profile.route, label = "Profile", icon = Icons.Outlined.AccountCircle)
 )
 

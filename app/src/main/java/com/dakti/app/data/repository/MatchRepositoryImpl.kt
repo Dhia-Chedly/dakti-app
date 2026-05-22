@@ -13,6 +13,7 @@ import com.dakti.app.domain.model.MatchReservationContext
 import com.dakti.app.domain.model.MatchStatus
 import com.dakti.app.domain.model.MatchWithContext
 import com.dakti.app.domain.model.MatchWithInvitations
+import com.dakti.app.domain.model.ReservationStatus
 import com.dakti.app.domain.repository.MatchRepository
 import com.dakti.app.domain.repository.NotificationRepository
 import com.dakti.app.util.Resource
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import retrofit2.HttpException
 
 @Singleton
 class MatchRepositoryImpl @Inject constructor(
@@ -45,7 +47,7 @@ class MatchRepositoryImpl @Inject constructor(
             matchesCache.value = matchesCache.value + (organizerId to hydrated)
             Resource.Success(hydrated)
         }.getOrElse { error ->
-            Resource.Error(error.message ?: "Could not fetch matches")
+            Resource.Error(error.toUserFacingMatchError("Could not fetch matches"))
         }
     }
 
@@ -73,7 +75,6 @@ class MatchRepositoryImpl @Inject constructor(
                     "organizer_id" to organizerId,
                     "venue_id" to payload.venueId,
                     "reservation_id" to payload.reservationId,
-                    "title" to "${payload.sportType} Match",
                     "sport_type" to payload.sportType,
                     "match_time" to payload.scheduledStartTime.toString(),
                     "required_players" to payload.requiredPlayers,
@@ -94,7 +95,7 @@ class MatchRepositoryImpl @Inject constructor(
             val details = hydrateMatches(listOf(created), mapOf(created.venueId to venue)).first()
             Resource.Success(details)
         }.getOrElse { error ->
-            Resource.Error(error.message ?: "Could not create match")
+            Resource.Error(error.toUserFacingMatchError("Could not create match"))
         }
     }
 
@@ -106,7 +107,7 @@ class MatchRepositoryImpl @Inject constructor(
                 ?: return@runCatching Resource.Error("Match details unavailable")
             Resource.Success(details)
         }.getOrElse { error ->
-            Resource.Error(error.message ?: "Could not fetch match details")
+            Resource.Error(error.toUserFacingMatchError("Could not fetch match details"))
         }
     }
 
@@ -115,22 +116,28 @@ class MatchRepositoryImpl @Inject constructor(
 
         return runCatching {
             val reservations = supabaseRemoteDataSource.getReservationsByOrganizer(organizerId)
-            val contexts = reservations.mapNotNull { row ->
-                val venue = supabaseRemoteDataSource.getVenueById(row.venueId) ?: return@mapNotNull null
-                val slot = supabaseRemoteDataSource.getTimeSlotById(row.timeSlotId) ?: return@mapNotNull null
+            val contexts = reservations.map { row ->
+                val venue = runCatching {
+                    supabaseRemoteDataSource.getVenueById(row.venueId)
+                }.getOrNull()
+                val slot = runCatching {
+                    supabaseRemoteDataSource.getTimeSlotById(row.timeSlotId)
+                }.getOrNull()
                 MatchReservationContext(
                     reservationId = row.id,
-                    venueId = venue.id,
-                    venueName = venue.name,
-                    venueAddress = venue.address,
-                    sportType = venue.sportType,
-                    scheduledStartTime = slot.startTime.toInstantOrNow(),
-                    timeSlotLabel = slot.toLabel()
+                    venueId = row.venueId,
+                    venueName = venue?.name.orEmpty(),
+                    venueAddress = venue?.address.orEmpty(),
+                    reservationStatus = row.status.toReservationStatus(),
+                    sportType = venue?.sportType.orEmpty(),
+                    scheduledStartTime = slot?.startTime?.toInstantOrNow()
+                        ?: row.createdAt.toInstantOrNow(),
+                    timeSlotLabel = slot?.toLabel() ?: "Reserved slot"
                 )
             }
             Resource.Success(contexts)
         }.getOrElse { error ->
-            Resource.Error(error.message ?: "Could not fetch reservation contexts")
+            Resource.Error(error.toUserFacingMatchError("Could not fetch reservation contexts"))
         }
     }
 
@@ -166,7 +173,7 @@ class MatchRepositoryImpl @Inject constructor(
 
             Resource.Success(Unit)
         }.getOrElse { error ->
-            Resource.Error(error.message ?: "Could not update match status")
+            Resource.Error(error.toUserFacingMatchError("Could not update match status"))
         }
     }
 
@@ -190,7 +197,6 @@ class MatchRepositoryImpl @Inject constructor(
                 "organizer_id" to match.organizerId,
                 "venue_id" to match.venueId,
                 "reservation_id" to match.reservationId,
-                "title" to match.title,
                 "sport_type" to match.sportType,
                 "match_time" to match.scheduledStartTime.toString(),
                 "required_players" to match.requiredPlayers,
@@ -206,7 +212,7 @@ class MatchRepositoryImpl @Inject constructor(
             }
             Resource.Success(match)
         }.getOrElse { error ->
-            Resource.Error(error.message ?: "Could not save match")
+            Resource.Error(error.toUserFacingMatchError("Could not save match"))
         }
     }
 
@@ -245,7 +251,7 @@ class MatchRepositoryImpl @Inject constructor(
             organizerId = organizerId,
             venueId = venueId,
             reservationId = reservationId,
-            title = title.orEmpty(),
+            title = title?.takeIf { value -> value.isNotBlank() } ?: "$sportType Match",
             sportType = sportType,
             scheduledStartTime = matchTime.toInstantOrNow(),
             requiredPlayers = requiredPlayers,
@@ -305,6 +311,14 @@ class MatchRepositoryImpl @Inject constructor(
             MatchStatus.COMPLETED -> "completed"
         }
 
+    private fun String.toReservationStatus(): ReservationStatus =
+        when (lowercase()) {
+            "pending" -> ReservationStatus.PENDING
+            "cancelled" -> ReservationStatus.CANCELLED
+            "completed" -> ReservationStatus.COMPLETED
+            else -> ReservationStatus.CONFIRMED
+        }
+
     private fun TimeSlotRowDto.toLabel(): String {
         val zoneId = ZoneId.systemDefault()
         val start = startTime.toInstantOrNow().atZone(zoneId)
@@ -314,6 +328,22 @@ class MatchRepositoryImpl @Inject constructor(
 
     private fun String.toInstantOrNow(): Instant =
         runCatching { Instant.parse(this) }.getOrElse { Instant.now() }
+
+    private fun Throwable.toUserFacingMatchError(defaultMessage: String): String {
+        if (this !is HttpException) {
+            return message ?: defaultMessage
+        }
+
+        val body = runCatching {
+            response()?.errorBody()?.string()
+        }.getOrNull()?.takeIf { value -> value.isNotBlank() }
+
+        return if (body != null) {
+            "HTTP ${code()}: $body"
+        } else {
+            message ?: defaultMessage
+        }
+    }
 
     private companion object {
         private const val MIN_REQUIRED_PLAYERS: Int = 2

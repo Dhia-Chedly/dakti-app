@@ -106,6 +106,9 @@ class FakeAuthRepository : AuthRepository {
 
 class FakeVenueRepository : VenueRepository {
     var venuesWithSlots: List<VenueWithTimeSlots> = listOf(TestData.venueWithSlots())
+    var searchVenuesResult: Resource<List<VenueWithTimeSlots>>? = null
+    var venueWithSlotsResult: Resource<VenueWithTimeSlots>? = null
+    var sportTypesResult: Resource<List<String>>? = null
 
     override suspend fun getVenues(): Resource<List<Venue>> =
         Resource.Success(venuesWithSlots.map { item -> item.venue })
@@ -120,6 +123,9 @@ class FakeVenueRepository : VenueRepository {
         query: String,
         sportType: String?
     ): Resource<List<VenueWithTimeSlots>> {
+        searchVenuesResult?.let { overrideResult ->
+            return overrideResult
+        }
         val normalizedQuery = query.trim().lowercase()
         val filtered = venuesWithSlots.filter { item ->
             val queryMatches = normalizedQuery.isBlank() ||
@@ -133,14 +139,16 @@ class FakeVenueRepository : VenueRepository {
     }
 
     override suspend fun getVenueWithTimeSlots(venueId: String): Resource<VenueWithTimeSlots> =
-        venuesWithSlots.firstOrNull { item -> item.venue.id == venueId }
-            ?.let { venue -> Resource.Success(venue) }
-            ?: Resource.Error("Venue not found")
+        venueWithSlotsResult
+            ?: venuesWithSlots.firstOrNull { item -> item.venue.id == venueId }
+                ?.let { venue -> Resource.Success(venue) }
+                ?: Resource.Error("Venue not found")
 
     override suspend fun getSportTypes(): Resource<List<String>> =
-        Resource.Success(
-            venuesWithSlots.map { item -> item.venue.sportType }.distinct().sorted()
-        )
+        sportTypesResult
+            ?: Resource.Success(
+                venuesWithSlots.map { item -> item.venue.sportType }.distinct().sorted()
+            )
 
     override fun observeVenues(): Flow<List<Venue>> = flowOf(venuesWithSlots.map { item -> item.venue })
 
@@ -196,11 +204,13 @@ class FakeMatchRepository : MatchRepository {
     var contextsResult: Resource<List<MatchReservationContext>> =
         Resource.Success(listOf(TestData.matchReservationContext()))
     var createCallCount: Int = 0
+    var lastCreatePayload: MatchCreatePayload? = null
 
     override suspend fun getMyMatches(): Resource<List<MatchWithContext>> = myMatchesResult
 
     override suspend fun createMatch(payload: MatchCreatePayload): Resource<MatchWithContext> {
         createCallCount += 1
+        lastCreatePayload = payload
         return createMatchResult
     }
 

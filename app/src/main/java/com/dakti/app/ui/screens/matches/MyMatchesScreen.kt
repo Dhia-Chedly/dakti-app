@@ -73,7 +73,7 @@ fun MyMatchesScreen(
                 item {
                     MatchEmptyState(
                         title = "No matches yet",
-                        message = "Create a match from reservation context or selected venue.",
+                        message = "Create a match by choosing a venue and setting your schedule.",
                         actionLabel = "Refresh",
                         onActionClick = onRefresh
                     )

@@ -121,15 +121,9 @@ class IntegrationManager @Inject constructor(
         intent: Intent
     ): Boolean {
         return runCatching {
-            val resolved = intent.resolveActivity(context.packageManager) != null
-            if (!resolved) {
-                false
-            } else {
-                context.startActivity(
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
-                true
-            }
+            val launchIntent = Intent(intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(launchIntent)
+            true
         }.getOrDefault(false)
     }
 }

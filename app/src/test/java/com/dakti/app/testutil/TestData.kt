@@ -167,6 +167,7 @@ object TestData {
         venueId = "venue-1",
         venueName = "Dakti Arena",
         venueAddress = "1 Avenue du Stade, Tunis",
+        reservationStatus = ReservationStatus.CONFIRMED,
         sportType = "Football",
         scheduledStartTime = plusOneDay,
         timeSlotLabel = "Wed, 22 Apr 18:00 - 19:00"

@@ -1,5 +1,7 @@
 package com.dakti.app.presentation.venues
 
+import com.dakti.app.domain.location.UserLocationProvider
+import com.dakti.app.domain.usecase.GetCurrentLocationUseCase
 import com.dakti.app.domain.usecase.GetVenueDetailsUseCase
 import com.dakti.app.domain.usecase.GetVenueSportTypesUseCase
 import com.dakti.app.domain.usecase.SearchVenuesUseCase
@@ -22,12 +24,16 @@ class VenueViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val venueRepository = FakeVenueRepository()
+    private val userLocationProvider = object : UserLocationProvider {
+        override suspend fun getCurrentLocation() = null
+    }
 
     private fun createViewModel(): VenueViewModel =
         VenueViewModel(
             searchVenuesUseCase = SearchVenuesUseCase(venueRepository),
             getVenueDetailsUseCase = GetVenueDetailsUseCase(venueRepository),
-            getVenueSportTypesUseCase = GetVenueSportTypesUseCase(venueRepository)
+            getVenueSportTypesUseCase = GetVenueSportTypesUseCase(venueRepository),
+            getCurrentLocationUseCase = GetCurrentLocationUseCase(userLocationProvider)
         )
 
     @Test

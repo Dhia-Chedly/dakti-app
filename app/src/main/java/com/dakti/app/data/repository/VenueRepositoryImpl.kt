@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import retrofit2.HttpException
 
 @Singleton
 class VenueRepositoryImpl @Inject constructor(
@@ -32,7 +33,7 @@ class VenueRepositoryImpl @Inject constructor(
             venuesCache.value = venues
             Resource.Success(venues)
         }.getOrElse { error ->
-            Resource.Error(error.message ?: "Could not fetch venues")
+            Resource.Error(error.toUserFacingVenueError("Could not fetch venues"))
         }
     }
 
@@ -42,7 +43,7 @@ class VenueRepositoryImpl @Inject constructor(
                 ?: return@runCatching Resource.Error("Venue not found")
             Resource.Success(venue)
         }.getOrElse { error ->
-            Resource.Error(error.message ?: "Could not fetch venue")
+            Resource.Error(error.toUserFacingVenueError("Could not fetch venue"))
         }
     }
 
@@ -52,8 +53,10 @@ class VenueRepositoryImpl @Inject constructor(
     ): Resource<List<VenueWithTimeSlots>> {
         return runCatching {
             val venues = supabaseRemoteDataSource.getVenues(queryText = query, sportType = sportType)
-            val byVenue = supabaseRemoteDataSource.selectTimeSlots()
-                .groupBy { row -> row.venueId }
+            val byVenue = runCatching {
+                supabaseRemoteDataSource.selectTimeSlots()
+                    .groupBy { row -> row.venueId }
+            }.getOrElse { emptyMap() }
 
             val result = venues.map { venueRow ->
                 VenueWithTimeSlots(
@@ -66,7 +69,7 @@ class VenueRepositoryImpl @Inject constructor(
             venueWithSlotsCache.value = result.associateBy { item -> item.venue.id }
             Resource.Success(result)
         }.getOrElse { error ->
-            Resource.Error(error.message ?: "Could not search venues")
+            Resource.Error(error.toUserFacingVenueError("Could not search venues"))
         }
     }
 
@@ -74,7 +77,9 @@ class VenueRepositoryImpl @Inject constructor(
         return runCatching {
             val venue = supabaseRemoteDataSource.getVenueById(venueId)
                 ?: return@runCatching Resource.Error("Venue not found")
-            val slots = supabaseRemoteDataSource.selectTimeSlots(filters = mapOf("venue_id" to "eq.$venueId"))
+            val slots = runCatching {
+                supabaseRemoteDataSource.selectTimeSlots(filters = mapOf("venue_id" to "eq.$venueId"))
+            }.getOrElse { emptyList() }
             val domain = VenueWithTimeSlots(
                 venue = venue.toDomain(),
                 slots = slots.map { dto -> dto.toDomain() }
@@ -82,7 +87,7 @@ class VenueRepositoryImpl @Inject constructor(
             venueWithSlotsCache.value = venueWithSlotsCache.value + (venueId to domain)
             Resource.Success(domain)
         }.getOrElse { error ->
-            Resource.Error(error.message ?: "Could not fetch venue details")
+            Resource.Error(error.toUserFacingVenueError("Could not fetch venue details"))
         }
     }
 
@@ -94,7 +99,7 @@ class VenueRepositoryImpl @Inject constructor(
                 .sorted()
             Resource.Success(sportTypes)
         }.getOrElse { error ->
-            Resource.Error(error.message ?: "Could not fetch sport types")
+            Resource.Error(error.toUserFacingVenueError("Could not fetch sport types"))
         }
     }
 
@@ -185,6 +190,22 @@ class VenueRepositoryImpl @Inject constructor(
 
     private fun String.toInstantOrNow(): Instant =
         runCatching { Instant.parse(this) }.getOrElse { Instant.now() }
+
+    private fun Throwable.toUserFacingVenueError(defaultMessage: String): String {
+        if (this !is HttpException) {
+            return message ?: defaultMessage
+        }
+
+        val body = runCatching {
+            response()?.errorBody()?.string()
+        }.getOrNull()?.takeIf { value -> value.isNotBlank() }
+
+        return if (body != null) {
+            "HTTP ${code()}: $body"
+        } else {
+            message ?: defaultMessage
+        }
+    }
 
     private companion object {
         private const val DEFAULT_CAPACITY: Int = 10

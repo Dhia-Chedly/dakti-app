@@ -213,6 +213,7 @@ data class MatchReservationContext(
     val venueId: String,
     val venueName: String,
     val venueAddress: String,
+    val reservationStatus: ReservationStatus,
     val sportType: String,
     val scheduledStartTime: Instant,
     val timeSlotLabel: String

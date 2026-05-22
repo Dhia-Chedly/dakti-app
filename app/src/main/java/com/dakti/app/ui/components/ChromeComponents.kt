@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,7 +42,8 @@ import com.dakti.app.ui.theme.DaktiThemeTokens
 data class DaktiGlassBottomNavItem(
     val route: String,
     val label: String,
-    val icon: ImageVector
+    val icon: ImageVector,
+    val isCenterProminent: Boolean = false
 )
 
 @Composable
@@ -172,6 +174,8 @@ fun DaktiGlassBottomNav(
                 val selected = selectedRoute == item.route
                 val containerColor = if (selected) {
                     chrome.selectedPill
+                } else if (item.isCenterProminent) {
+                    chrome.container.copy(alpha = 0.95f)
                 } else {
                     Color.Transparent
                 }
@@ -180,13 +184,21 @@ fun DaktiGlassBottomNav(
                 } else {
                     chrome.content.copy(alpha = 0.88f)
                 }
+                val itemShape = if (item.isCenterProminent) {
+                    RoundedCornerShape(999.dp)
+                } else {
+                    CircleShape
+                }
 
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .background(color = containerColor, shape = CircleShape)
+                        .background(color = containerColor, shape = itemShape)
                         .clickable { onNavigate(item.route) }
-                        .padding(horizontal = 6.dp, vertical = 8.dp),
+                        .padding(
+                            horizontal = if (item.isCenterProminent) 8.dp else 6.dp,
+                            vertical = if (item.isCenterProminent) 10.dp else 8.dp
+                        ),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -194,7 +206,7 @@ fun DaktiGlassBottomNav(
                         imageVector = item.icon,
                         contentDescription = item.label,
                         tint = contentColor,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(if (item.isCenterProminent) 24.dp else 20.dp)
                     )
                     Text(
                         text = item.label,
@@ -202,6 +214,7 @@ fun DaktiGlassBottomNav(
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.labelMedium,
                         color = contentColor,
+                        fontWeight = if (item.isCenterProminent) FontWeight.SemiBold else FontWeight.Medium,
                         textAlign = TextAlign.Center
                     )
                 }

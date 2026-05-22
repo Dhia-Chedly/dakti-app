@@ -285,20 +285,34 @@ class NotificationRepositoryImpl @Inject constructor(
             ?.takeIf { value -> value.isNotBlank() }
             ?: return
 
-        notificationDao.upsertNotification(
-            Notification(
-                id = "notif-${UUID.randomUUID()}",
-                userId = targetUserId,
-                type = type,
-                title = title,
-                content = content,
-                isRead = false,
-                relatedMatchId = relatedMatchId,
-                relatedReservationId = relatedReservationId,
-                createdAt = Instant.now(),
-                readAt = null
-            ).toEntity()
+        val notification = Notification(
+            id = "notif-${UUID.randomUUID()}",
+            userId = targetUserId,
+            type = type,
+            title = title,
+            content = content,
+            isRead = false,
+            relatedMatchId = relatedMatchId,
+            relatedReservationId = relatedReservationId,
+            createdAt = Instant.now(),
+            readAt = null
         )
+
+        val saveWithReferences = runCatching {
+            notificationDao.upsertNotification(notification.toEntity())
+        }
+        if (saveWithReferences.isSuccess) {
+            return
+        }
+
+        runCatching {
+            notificationDao.upsertNotification(
+                notification.copy(
+                    relatedMatchId = null,
+                    relatedReservationId = null
+                ).toEntity()
+            )
+        }
     }
 
     private fun NotificationDispatchResult.toResource(): Resource<Unit> =

@@ -1,5 +1,10 @@
-﻿package com.dakti.app.ui.navigation
+package com.dakti.app.ui.navigation
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -21,6 +26,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.core.content.ContextCompat
 import com.dakti.app.presentation.assistant.AssistantViewModel
 import com.dakti.app.presentation.auth.AuthStatus
 import com.dakti.app.presentation.auth.AuthViewModel
@@ -31,6 +37,7 @@ import com.dakti.app.presentation.home.HomeViewModel
 import com.dakti.app.presentation.invitations.InvitationViewModel
 import com.dakti.app.presentation.integration.ExternalActionViewModel
 import com.dakti.app.presentation.matches.MatchViewModel
+import com.dakti.app.presentation.matches.MatchesDashboardTab
 import com.dakti.app.presentation.profile.ProfileViewModel
 import com.dakti.app.presentation.reservations.ReservationViewModel
 import com.dakti.app.presentation.venues.VenueViewModel
@@ -44,11 +51,9 @@ import com.dakti.app.ui.screens.auth.SplashScreen
 import com.dakti.app.ui.screens.auth.WelcomeScreen
 import com.dakti.app.ui.screens.home.HomeScreen
 import com.dakti.app.ui.screens.invitations.InvitePlayersScreen
-import com.dakti.app.ui.screens.invitations.InvitationsScreen
 import com.dakti.app.ui.screens.matches.CreateMatchScreen
+import com.dakti.app.ui.screens.matches.MatchesDashboardScreen
 import com.dakti.app.ui.screens.matches.MatchDetailsScreen
-import com.dakti.app.ui.screens.matches.MatchesScreen
-import com.dakti.app.ui.screens.matches.MyMatchesScreen
 import com.dakti.app.ui.screens.profile.ProfileScreen
 import com.dakti.app.ui.screens.reservations.MyReservationsScreen
 import com.dakti.app.ui.screens.reservations.ReservationConfirmationScreen
@@ -234,7 +239,7 @@ fun DaktiNavGraph(
                     HomeScreen(
                         uiState = state,
                         onBrowseVenues = { navController.navigate(AppRoute.Venues.route) },
-                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.create(null)) },
+                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.route) },
                         onInvitePlayers = { navController.navigate(AppRoute.MyMatches.route) },
                         onOpenAssistant = { navController.navigate(AppRoute.Assistant.route) },
                         onOpenInvitations = { navController.navigate(AppRoute.Invitations.route) },
@@ -247,16 +252,43 @@ fun DaktiNavGraph(
                 composable(AppRoute.Venues.route) {
                     val viewModel: VenueViewModel = hiltViewModel()
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
+                    val context = LocalContext.current
+                    val locationPermissionLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.RequestMultiplePermissions()
+                    ) { result ->
+                        val granted = result.any { (_, value) -> value }
+                        viewModel.onLocationPermissionUpdated(granted)
+                    }
+
+                    LaunchedEffect(Unit) {
+                        viewModel.onLocationPermissionUpdated(
+                            context.hasVenueLocationPermission()
+                        )
+                    }
 
                     VenueListScreen(
                         searchQuery = state.searchQuery,
                         sportFilters = state.sportFilters,
                         selectedSportFilter = state.selectedSportFilter,
+                        selectedAdvancedFilter = state.selectedAdvancedFilter,
+                        locationPermissionGranted = state.locationPermissionGranted,
+                        isResolvingLocation = state.isResolvingLocation,
+                        locationMessage = state.locationMessage,
                         isLoading = state.isLoading,
                         venues = state.filteredVenues,
                         errorMessage = state.errorMessage,
                         onSearchQueryChanged = viewModel::onSearchQueryChanged,
                         onSportFilterSelected = viewModel::onSportFilterSelected,
+                        onAdvancedFilterSelected = viewModel::onAdvancedFilterSelected,
+                        onRequestLocationPermission = {
+                            locationPermissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                )
+                            )
+                        },
+                        onRefreshLocation = viewModel::refreshLocation,
                         onRetry = viewModel::refreshVenues,
                         onVenueClick = { venueId -> navController.navigate(AppRoute.VenueDetails.create(venueId)) }
                     )
@@ -266,17 +298,26 @@ fun DaktiNavGraph(
                     val viewModel: MatchViewModel = hiltViewModel()
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-                    MatchesScreen(
-                        isLoading = state.isLoading,
-                        errorMessage = state.errorMessage,
-                        openMatchesCount = state.openMatchesCount,
-                        matchesPreview = state.matches,
-                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.create(null)) },
-                        onOpenMyMatches = { navController.navigate(AppRoute.MyMatches.route) },
-                        onOpenInvitations = { navController.navigate(AppRoute.Invitations.route) },
-                        onRefresh = viewModel::refreshMatchesModule,
+                    LaunchedEffect(Unit) {
+                        viewModel.setInitialTab(MatchesDashboardTab.UPCOMING)
+                    }
+
+                    MatchesDashboardScreen(
+                        uiState = state,
+                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.route) },
                         onOpenMatchDetails = { matchId ->
                             navController.navigate(AppRoute.MatchDetails.create(matchId))
+                        },
+                        onOpenAssistant = { navController.navigate(AppRoute.Assistant.route) },
+                        onRefresh = viewModel::refresh,
+                        onTabSelected = viewModel::onTabSelected,
+                        onSearchQueryChanged = viewModel::onSearchQueryChanged,
+                        onToggleNeedsAttention = viewModel::onNeedsAttentionFilterToggled,
+                        onAcceptInvitation = { invitationId ->
+                            viewModel.respondToInvitation(invitationId = invitationId, accept = true)
+                        },
+                        onDeclineInvitation = { invitationId ->
+                            viewModel.respondToInvitation(invitationId = invitationId, accept = false)
                         }
                     )
                 }
@@ -427,11 +468,6 @@ fun DaktiNavGraph(
                         onConfirm = viewModel::confirmReservation,
                         onBack = { navController.popBackStack() },
                         onMyReservationsClick = { navController.navigate(AppRoute.MyReservations.route) },
-                        onCreateMatchPlaceholder = {
-                            navController.navigate(
-                                AppRoute.CreateMatch.create(state.latestCreatedReservationId)
-                            )
-                        },
                         onHomeClick = {
                             navController.navigate(AppRoute.Home.route) {
                                 popUpTo(AppRoute.Home.route) { inclusive = false }
@@ -449,9 +485,6 @@ fun DaktiNavGraph(
                         reservations = state.myReservations,
                         errorMessage = state.historyErrorMessage,
                         onRefresh = viewModel::loadMyReservations,
-                        onCreateMatchFromReservation = { reservationId ->
-                            navController.navigate(AppRoute.CreateMatch.create(reservationId))
-                        },
                         onBackToHome = {
                             navController.navigate(AppRoute.Home.route) {
                                 popUpTo(AppRoute.Home.route) { inclusive = false }
@@ -464,45 +497,48 @@ fun DaktiNavGraph(
                     val viewModel: MatchViewModel = hiltViewModel()
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-                    MyMatchesScreen(
-                        isLoading = state.isLoading,
-                        matches = state.matches,
-                        errorMessage = state.errorMessage,
-                        onRefresh = viewModel::refreshMatchesModule,
-                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.create(null)) },
-                        onMatchClick = { matchId ->
+                    LaunchedEffect(Unit) {
+                        viewModel.setInitialTab(MatchesDashboardTab.UPCOMING)
+                    }
+
+                    MatchesDashboardScreen(
+                        uiState = state,
+                        onBack = { navController.popBackStack() },
+                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.route) },
+                        onOpenMatchDetails = { matchId ->
                             navController.navigate(AppRoute.MatchDetails.create(matchId))
+                        },
+                        onOpenAssistant = { navController.navigate(AppRoute.Assistant.route) },
+                        onRefresh = viewModel::refresh,
+                        onTabSelected = viewModel::onTabSelected,
+                        onSearchQueryChanged = viewModel::onSearchQueryChanged,
+                        onToggleNeedsAttention = viewModel::onNeedsAttentionFilterToggled,
+                        onAcceptInvitation = { invitationId ->
+                            viewModel.respondToInvitation(invitationId = invitationId, accept = true)
+                        },
+                        onDeclineInvitation = { invitationId ->
+                            viewModel.respondToInvitation(invitationId = invitationId, accept = false)
                         }
                     )
                 }
 
-                composable(
-                    route = AppRoute.CreateMatch.route,
-                    arguments = listOf(
-                        navArgument(AppRoute.CreateMatch.RESERVATION_ID_ARG) {
-                            type = NavType.StringType
-                            nullable = true
-                            defaultValue = null
-                        }
-                    )
-                ) { entry ->
+                composable(route = AppRoute.CreateMatch.route) {
                     val viewModel: MatchViewModel = hiltViewModel()
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
-                    val reservationId = entry.arguments?.getString(AppRoute.CreateMatch.RESERVATION_ID_ARG)
 
-                    LaunchedEffect(reservationId) {
-                        viewModel.onCreateScreenOpened(reservationId)
+                    LaunchedEffect(Unit) {
+                        viewModel.onCreateScreenOpened()
                     }
 
                     CreateMatchScreen(
                         formState = state.formState,
-                        reservationContexts = state.reservationContexts,
                         venueOptions = state.venueOptions,
+                        isVenueOptionsLoading = state.isVenueOptionsLoading,
+                        venueOptionsErrorMessage = state.venueOptionsErrorMessage,
                         isSubmitting = state.isCreatingMatch,
                         isCreateEnabled = state.isCreateEnabled,
                         successMessage = state.createSuccessMessage,
                         errorMessage = state.createErrorMessage,
-                        onReservationSelected = viewModel::onReservationContextSelected,
                         onVenueSelected = viewModel::onVenueSelected,
                         onSportTypeChanged = viewModel::onSportTypeChanged,
                         onLocationChanged = viewModel::onLocationChanged,
@@ -510,6 +546,7 @@ fun DaktiNavGraph(
                         onRequiredPlayersChanged = viewModel::onRequiredPlayersChanged,
                         onDescriptionChanged = viewModel::onDescriptionChanged,
                         onCreateClick = viewModel::createMatch,
+                        onRetryDependencies = viewModel::refreshCreateDependencies,
                         onBack = { navController.popBackStack() }
                     )
                 }
@@ -634,26 +671,31 @@ fun DaktiNavGraph(
                 }
 
                 composable(AppRoute.Invitations.route) {
-                    val viewModel: InvitationViewModel = hiltViewModel()
+                    val viewModel: MatchViewModel = hiltViewModel()
                     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
                     LaunchedEffect(Unit) {
-                        viewModel.loadPlayerInvitations()
+                        viewModel.setInitialTab(MatchesDashboardTab.INVITES)
                     }
 
-                    InvitationsScreen(
-                        isLoading = state.isLoading,
-                        invitations = state.invitations,
-                        errorMessage = state.errorMessage,
-                        actionMessage = state.actionMessage,
-                        onAccept = { invitationId ->
+                    MatchesDashboardScreen(
+                        uiState = state,
+                        onBack = { navController.popBackStack() },
+                        onCreateMatch = { navController.navigate(AppRoute.CreateMatch.route) },
+                        onOpenMatchDetails = { matchId ->
+                            navController.navigate(AppRoute.MatchDetails.create(matchId))
+                        },
+                        onOpenAssistant = { navController.navigate(AppRoute.Assistant.route) },
+                        onRefresh = viewModel::refresh,
+                        onTabSelected = viewModel::onTabSelected,
+                        onSearchQueryChanged = viewModel::onSearchQueryChanged,
+                        onToggleNeedsAttention = viewModel::onNeedsAttentionFilterToggled,
+                        onAcceptInvitation = { invitationId ->
                             viewModel.respondToInvitation(invitationId = invitationId, accept = true)
                         },
-                        onDecline = { invitationId ->
+                        onDeclineInvitation = { invitationId ->
                             viewModel.respondToInvitation(invitationId = invitationId, accept = false)
                         },
-                        onRefresh = viewModel::loadPlayerInvitations,
-                        onBackToHome = { navController.navigate(AppRoute.Home.route) }
                     )
                 }
 
@@ -694,11 +736,26 @@ private fun DaktiBottomNavigation(
             DaktiGlassBottomNavItem(
                 route = item.route,
                 label = item.label,
-                icon = item.icon
+                icon = item.icon,
+                isCenterProminent = item.isCenterProminent
             )
         },
         selectedRoute = currentDestinationRoute,
         onNavigate = onNavigate
     )
 }
+
+private fun Context.hasVenueLocationPermission(): Boolean {
+    val hasFine = ContextCompat.checkSelfPermission(
+        this,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+    val hasCoarse = ContextCompat.checkSelfPermission(
+        this,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+    return hasFine || hasCoarse
+}
+
+
 

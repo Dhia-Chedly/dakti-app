@@ -178,8 +178,7 @@ fun ReservationEmptyState(
 fun ReservationSuccessContent(
     message: String,
     onMyReservationsClick: () -> Unit,
-    onHomeClick: () -> Unit,
-    onCreateMatchPlaceholder: () -> Unit
+    onHomeClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -203,9 +202,6 @@ fun ReservationSuccessContent(
             )
             OutlinedButton(onClick = onMyReservationsClick) {
                 Text(text = "View My Reservations")
-            }
-            OutlinedButton(onClick = onCreateMatchPlaceholder) {
-                Text(text = "Create Match from Reservation")
             }
             OutlinedButton(onClick = onHomeClick) {
                 Text(text = "Back to Home")

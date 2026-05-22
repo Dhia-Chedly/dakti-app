@@ -112,31 +112,51 @@ class SupabaseRemoteDataSource @Inject constructor(
         queryText: String,
         sportType: String?
     ): List<VenueRowDto> {
-        val query = linkedMapOf(
-            "select" to "id,name,sport_type,address,city,state,country,latitude,longitude,contact_number,description,image_url,price_per_hour,currency,amenities,capacity,created_at,updated_at",
-            "order" to "created_at.desc"
-        )
-
+        val baseFilters = linkedMapOf<String, String>()
         if (sportType != null && sportType.isNotBlank()) {
-            query["sport_type"] = "ilike.${escapeLike(sportType)}"
+            baseFilters["sport_type"] = "eq.${sportType.trim()}"
         }
 
-        if (queryText.isNotBlank()) {
-            query["or"] = "(name.ilike.${escapeLike(queryText)},address.ilike.${escapeLike(queryText)})"
+        val safeQuery = queryText.toSafeSearchValue()
+        if (safeQuery.isNotBlank()) {
+            val likePattern = wildcardPattern(safeQuery)
+            baseFilters["or"] = "(name.ilike.$likePattern,address.ilike.$likePattern)"
         }
 
-        return selectRows(
-            table = "venues",
-            query = query,
-            type = object : TypeToken<List<VenueRowDto>>() {}.type
-        )
+        val modernQuery = linkedMapOf(
+            // Read all available columns from the current Supabase schema.
+            "select" to "*",
+            "order" to "created_at.desc"
+        ).apply { putAll(baseFilters) }
+
+        return try {
+            selectRows(
+                table = "venues",
+                query = modernQuery,
+                type = object : TypeToken<List<VenueRowDto>>() {}.type
+            )
+        } catch (error: HttpException) {
+            if (error.code() != 400) {
+                throw error
+            }
+
+            val compatibleQuery = linkedMapOf(
+                "select" to "*",
+                "order" to "name.asc"
+            ).apply { putAll(baseFilters) }
+            selectRows(
+                table = "venues",
+                query = compatibleQuery,
+                type = object : TypeToken<List<VenueRowDto>>() {}.type
+            )
+        }
     }
 
     suspend fun getVenueById(venueId: String): VenueRowDto? {
         val rows = selectRows<VenueRowDto>(
             table = "venues",
             query = mapOf(
-                "select" to "id,name,sport_type,address,city,state,country,latitude,longitude,contact_number,description,image_url,price_per_hour,currency,amenities,capacity,created_at,updated_at",
+                "select" to "*",
                 "id" to "eq.$venueId",
                 "limit" to "1"
             ),
@@ -259,7 +279,7 @@ class SupabaseRemoteDataSource @Inject constructor(
         val rows = selectRows<MatchRowDto>(
             table = "matches",
             query = mapOf(
-                "select" to "id,organizer_id,venue_id,reservation_id,title,sport_type,match_time,required_players,status,description,created_at,updated_at",
+                "select" to "*",
                 "id" to "eq.$matchId",
                 "limit" to "1"
             ),
@@ -272,7 +292,7 @@ class SupabaseRemoteDataSource @Inject constructor(
         return selectRows(
             table = "matches",
             query = mapOf(
-                "select" to "id,organizer_id,venue_id,reservation_id,title,sport_type,match_time,required_players,status,description,created_at,updated_at",
+                "select" to "*",
                 "organizer_id" to "eq.$organizerId",
                 "order" to "match_time.asc"
             ),
@@ -536,7 +556,22 @@ class SupabaseRemoteDataSource @Inject constructor(
 
     private fun bearer(token: String): String = "Bearer $token"
 
-    private fun escapeLike(value: String): String = "%${value.trim()}%"
+    private fun String.toSafeSearchValue(): String {
+        // PostgREST reserves comma/dot/colon/parentheses in filter grammar.
+        return trim()
+            .replace(",", " ")
+            .replace(".", " ")
+            .replace(":", " ")
+            .replace("(", " ")
+            .replace(")", " ")
+            .replace("'", " ")
+            .replace("\"", " ")
+            .replace("\\", " ")
+            .replace("%", " ")
+            .replace(Regex("\\s+"), " ")
+    }
+
+    private fun wildcardPattern(value: String): String = "*$value*"
 
     private fun inFilter(ids: List<String>): String = "in.(${ids.joinToString(",")})"
 

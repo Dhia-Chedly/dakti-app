@@ -29,16 +29,7 @@ sealed class AppRoute(val route: String) {
     }
     data object MyReservations : AppRoute("my_reservations")
 
-    data object CreateMatch : AppRoute("create_match?reservationId={reservationId}") {
-        const val RESERVATION_ID_ARG: String = "reservationId"
-
-        fun create(reservationId: String?): String =
-            if (reservationId.isNullOrBlank()) {
-                "create_match"
-            } else {
-                "create_match?reservationId=$reservationId"
-            }
-    }
+    data object CreateMatch : AppRoute("create_match")
     data object MatchDetails : AppRoute("match_details/{matchId}") {
         fun create(matchId: String): String = "match_details/$matchId"
     }

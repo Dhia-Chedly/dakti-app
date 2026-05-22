@@ -4,14 +4,11 @@ package com.dakti.app.ui.screens.reservations
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import com.dakti.app.ui.components.DaktiHeroScaffold
 import com.dakti.app.ui.components.DaktiGlassTopBar
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -25,7 +22,6 @@ fun MyReservationsScreen(
     reservations: List<ReservationHistoryItemUi>,
     errorMessage: String?,
     onRefresh: () -> Unit,
-    onCreateMatchFromReservation: (String) -> Unit,
     onBackToHome: () -> Unit
 ) {
     DaktiHeroScaffold(
@@ -44,7 +40,7 @@ fun MyReservationsScreen(
             item {
                 SectionHeader(
                     title = "Reservation History",
-                    subtitle = "Track recent bookings and continue into match setup from any reservation."
+                    subtitle = "Track your recent bookings."
                 )
             }
 
@@ -77,12 +73,6 @@ fun MyReservationsScreen(
             if (!isLoading && reservations.isNotEmpty()) {
                 items(reservations, key = { reservation -> reservation.id }) { reservation ->
                     ReservationCard(reservation = reservation)
-                    TextButton(
-                        onClick = { onCreateMatchFromReservation(reservation.id) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(text = "Create Match from this Reservation")
-                    }
                 }
             }
 

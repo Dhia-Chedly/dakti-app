@@ -5,29 +5,20 @@ package com.dakti.app.ui.screens.matches
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.Icon
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,12 +26,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.dakti.app.presentation.matches.MatchCreateFormState
-import com.dakti.app.presentation.matches.MatchReservationContextUi
 import com.dakti.app.presentation.matches.MatchVenueOptionUi
 import com.dakti.app.ui.components.AppInlineMessage
+import com.dakti.app.ui.components.AppLoadingState
 import com.dakti.app.ui.components.AppStateCard
 import com.dakti.app.ui.components.DaktiHeroScaffold
 import com.dakti.app.ui.components.DaktiGlassTopBar
@@ -57,17 +48,20 @@ private data class DropdownOption(
 private const val MIN_REQUIRED_PLAYERS = 2
 private const val MAX_REQUIRED_PLAYERS = 30
 private const val DEFAULT_REQUIRED_PLAYERS = 10
+private const val SPORT_DROPDOWN_TAG = "create_match_sport_dropdown"
+private const val LOCATION_DROPDOWN_TAG = "create_match_location_dropdown"
+private const val VENUE_DROPDOWN_TAG = "create_match_venue_dropdown"
 
 @Composable
 fun CreateMatchScreen(
     formState: MatchCreateFormState,
-    reservationContexts: List<MatchReservationContextUi>,
     venueOptions: List<MatchVenueOptionUi>,
+    isVenueOptionsLoading: Boolean,
+    venueOptionsErrorMessage: String?,
     isSubmitting: Boolean,
     isCreateEnabled: Boolean,
     successMessage: String?,
     errorMessage: String?,
-    onReservationSelected: (String?) -> Unit,
     onVenueSelected: (String?) -> Unit,
     onSportTypeChanged: (String) -> Unit,
     onLocationChanged: (String) -> Unit,
@@ -75,6 +69,7 @@ fun CreateMatchScreen(
     onRequiredPlayersChanged: (String) -> Unit,
     onDescriptionChanged: (String) -> Unit,
     onCreateClick: () -> Unit,
+    onRetryDependencies: () -> Unit,
     onBack: () -> Unit
 ) {
     val sportOptions = remember(venueOptions) {
@@ -142,45 +137,31 @@ fun CreateMatchScreen(
             item {
                 SectionHeader(
                     title = "Match Setup",
-                    subtitle = "Create from reservation context when available, or choose a venue directly."
+                    subtitle = "Select a venue, set your match details, and create whenever you are ready."
                 )
             }
 
             item {
                 Text(
-                    text = "Reservation Context",
+                    text = "Venue Selection",
                     style = MaterialTheme.typography.titleSmall
                 )
             }
 
-            if (reservationContexts.isEmpty()) {
+            if (isVenueOptionsLoading) {
+                item {
+                    AppLoadingState(message = "Loading venue options...")
+                }
+            } else if (venueOptionsErrorMessage != null) {
                 item {
                     AppStateCard(
-                        message = "No reservation context yet. You can still create a match by selecting a venue."
+                        title = "Could not load venue options",
+                        message = venueOptionsErrorMessage,
+                        actionLabel = "Retry",
+                        onActionClick = onRetryDependencies
                     )
                 }
-            } else {
-                item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        item {
-                            FilterChip(
-                                selected = formState.selectedReservationId == null,
-                                onClick = { onReservationSelected(null) },
-                                label = { Text("No reservation") }
-                            )
-                        }
-                        items(reservationContexts) { context ->
-                            FilterChip(
-                                selected = formState.selectedReservationId == context.reservationId,
-                                onClick = { onReservationSelected(context.reservationId) },
-                                label = { Text(context.displayLabel) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (venueOptions.isEmpty()) {
+            } else if (venueOptions.isEmpty()) {
                 item {
                     AppStateCard(
                         title = "No venues available",
@@ -194,7 +175,8 @@ fun CreateMatchScreen(
                         selectedValue = formState.sportType,
                         options = sportOptions,
                         placeholder = "Select sport type",
-                        onSelected = onSportTypeChanged
+                        onSelected = onSportTypeChanged,
+                        testTagPrefix = SPORT_DROPDOWN_TAG
                     )
                 }
 
@@ -204,7 +186,8 @@ fun CreateMatchScreen(
                         selectedValue = formState.selectedLocation,
                         options = locationOptions,
                         placeholder = "Select location",
-                        onSelected = onLocationChanged
+                        onSelected = onLocationChanged,
+                        testTagPrefix = LOCATION_DROPDOWN_TAG
                     )
                 }
 
@@ -214,7 +197,8 @@ fun CreateMatchScreen(
                         selectedValue = formState.selectedVenueId.orEmpty(),
                         options = venueDropdownOptions,
                         placeholder = "Select venue",
-                        onSelected = { venueId -> onVenueSelected(venueId.ifBlank { null }) }
+                        onSelected = { venueId -> onVenueSelected(venueId.ifBlank { null }) },
+                        testTagPrefix = VENUE_DROPDOWN_TAG
                     )
                 }
 
@@ -230,6 +214,13 @@ fun CreateMatchScreen(
                     item {
                         Text(
                             text = "Address: ${selectedVenue.address}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    item {
+                        Text(
+                            text = "Available slots (context): ${selectedVenue.availableSlotsCount}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -320,45 +311,42 @@ private fun FormDropdownField(
     selectedValue: String,
     options: List<DropdownOption>,
     placeholder: String,
-    onSelected: (String) -> Unit
+    onSelected: (String) -> Unit,
+    testTagPrefix: String
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selectedLabel = options.firstOrNull { option -> option.value == selectedValue }?.label.orEmpty()
 
-    Box(modifier = Modifier.fillMaxWidth()) {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("${testTagPrefix}_container")
+    ) {
         OutlinedTextField(
             value = selectedLabel,
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
             placeholder = { Text(placeholder) },
-            trailingIcon = {
-                Icon(
-                    imageVector = Icons.Default.ArrowDropDown,
-                    contentDescription = "Open $label options"
-                )
-            },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {
-                    expanded = true
-                }
+                .menuAnchor()
+                .testTag("${testTagPrefix}_field")
         )
 
-        DropdownMenu(
+        ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option.label) },
+                    modifier = Modifier.testTag(
+                        "${testTagPrefix}_option_${option.value.toTagToken()}"
+                    ),
                     onClick = {
                         onSelected(option.value)
                         expanded = false
@@ -367,6 +355,13 @@ private fun FormDropdownField(
             }
         }
     }
+}
+
+private fun String.toTagToken(): String {
+    val normalized = lowercase()
+        .replace(Regex("[^a-z0-9]+"), "_")
+        .trim('_')
+    return normalized.ifBlank { "empty" }
 }
 
 @Composable

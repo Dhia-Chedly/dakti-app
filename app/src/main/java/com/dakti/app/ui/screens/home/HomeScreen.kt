@@ -58,22 +58,42 @@ fun HomeScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = {}) {
-                        Box(
-                            modifier = Modifier
-                                .height(38.dp)
-                                .background(
-                                    color = chrome.selectedPill,
-                                    shape = CircleShape
+                    Box {
+                        IconButton(onClick = {}) {
+                            Box(
+                                modifier = Modifier
+                                    .height(38.dp)
+                                    .background(
+                                        color = chrome.selectedPill,
+                                        shape = CircleShape
+                                    )
+                                    .padding(horizontal = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.NotificationsNone,
+                                    contentDescription = "Notifications",
+                                    tint = chrome.selectedContent
                                 )
-                                .padding(horizontal = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.NotificationsNone,
-                                contentDescription = "Notifications",
-                                tint = chrome.selectedContent
-                            )
+                            }
+                        }
+                        if (uiState.header.notificationCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(18.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.error,
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                androidx.compose.material3.Text(
+                                    text = uiState.header.notificationCount.coerceAtMost(99).toString(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onError
+                                )
+                            }
                         }
                     }
                 }

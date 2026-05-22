@@ -110,7 +110,7 @@ class ReservationRepositoryImpl @Inject constructor(
                 return@runCatching Resource.Error("This slot has already been reserved")
             }
             val totalPrice = estimateTotalPrice(venue = venue, slot = slot)
-            val reservationCurrency = venue.currency.ifBlank { null }
+            val reservationCurrency = venue.currency?.ifBlank { null }
 
             val created = supabaseRemoteDataSource.createReservation(
                 payload = mapOf(
